@@ -5,7 +5,8 @@ type module_ = Module(string, list(fnDef));
 type fn = Fn(module_, fnDef);
 
 type t = {
-  modules: list(module_)
+  modules: list(module_),
+  mutable stack: list(Type.t)
 };
 
 let lookup = (modName, fnName, ctx) => {

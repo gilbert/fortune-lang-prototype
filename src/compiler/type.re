@@ -1,6 +1,13 @@
 exception TypeError(string);
 
-type t =
+type stack = list(t)
+
+and t =
   | Str
   | Num
-  | Tuple(list(t));
+  | Tuple(stack)
+  | Seq(stack, t)
+  | Fn(list(t), t)
+  | Arr(t)
+  | DepType(list(t) => t)
+  | Bottom;
