@@ -4,17 +4,9 @@ let stdlib = Context.[
     FnDef("split", Type.(Type.Fn([Str,Str], Arr(Str))) )
   ]),
   Module("IO", [
-    FnDef("log", Type.DepType( args => switch (args |> List.length) {
+    FnDef("log", Type.DepType("IO.log", args => switch (args |> List.length) {
     | 0 => raise(Type.TypeError("IO.log requires at least one argument"))
-    | _ => args |> List.rev |> List.hd
+    | _ => Type.Unit
     }))
   ]),
 ];
-
-let make_context = () => {
-  let ctx : Context.t = {
-    modules: stdlib,
-    stack: []
-  };
-  ctx
-};

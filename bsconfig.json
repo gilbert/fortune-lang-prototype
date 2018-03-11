@@ -13,7 +13,7 @@
   },
   "suffix": ".bs.js",
   "bs-dependencies": [
-    "bs-node", "bs-little-parser"
+    "bs-node"
   ],
   "warnings": {
     "error" : "+101"

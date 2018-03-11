@@ -1,11 +1,11 @@
-open BsLittleParser.Parser;
-let (^^^) = BsLittleParser.Parser.(^^);
+module Parser = BsLittleParser.MakeParser(Context);
+open Parser;
 
 let orElseLazy = (p, q, input) =>
   switch (p(input)) {
-  | [@implicit_arity] BsLittleParser.ParseResult.ParseSuccess(s, t) =>
-    [@implicit_arity] BsLittleParser.ParseResult.ParseSuccess(s, t)
-  | BsLittleParser.ParseResult.ParseFailure(_) => (q())(input)
+  | [@implicit_arity] ParseResult.ParseSuccess(s, t) =>
+    [@implicit_arity] ParseResult.ParseSuccess(s, t)
+  | ParseResult.ParseFailure(_) => (q())(input)
   };
 
 let (<|>|) = (p, q) => orElseLazy(p,q);
@@ -32,14 +32,33 @@ let module T = {
     | Literal(literal)
     | Pop
     | Inv(Context.fn, list(term))
-    | Seq(list(term), Type.t);
+    | Seq(list(term));
 
-  let getType = (ctx : Context.t, term) => switch(term) {
-  | Literal(Str(_)) => Type.Str
-  | Literal(Num(_)) => Type.Num
-  | Pop => List.hd(ctx.stack)
-  | Inv(Fn(_, FnDef(_, ty)), _) => ty
-  | Seq(_, ty) => ty
+  type tterm = (term, Type.t);
+
+  let rec getType = (ctx : Context.t, term) => switch(term) {
+  | Literal(Str(_)) => (ctx, Type.Str)
+  | Literal(Num(_)) => (ctx, Type.Num)
+  | Pop => Context.popType(ctx)
+  | Inv(Fn(_, FnDef(_, ty)), args) =>
+      let (ctx3, argTypes) = args
+      |> List.fold_left( ((ctx,tys), term) => {
+          let (ctx2, ty) = getType(ctx, term);
+          (ctx2, [ty, ...tys])
+        }, (ctx,[]));
+
+      (ctx3, Type.apply(ty, argTypes |> List.rev))
+  | Seq(terms) =>
+      let ctx2 = consume(ctx, terms);
+      (ctx2, ctx2 |> Context.topType)
+  }
+
+  and consume = (context : Context.t, terms) => {
+    terms
+    |> List.fold_left( (ctx, term) => {
+        let (ctx2, ty) = getType(ctx, term);
+        ty |> Context.pushType(ctx2)
+      }, context)
   };
 
   let rec print = (term) => switch(term) {
@@ -48,7 +67,7 @@ let module T = {
     | Pop => "_"
     | Inv(Fn(Module(mod_,_), FnDef(fun_, _)), args) =>
         mod_ ++ "." ++ fun_ ++ "(" ++ print_terms(args, ", ") ++ ")"
-    | Seq(terms, _) => print_terms(terms, " ")
+    | Seq(terms) => print_terms(terms, " ")
   }
   and print_terms = (terms, sep) => switch (List.length(terms)) {
     | 0 => ""
@@ -61,30 +80,30 @@ let module T = {
 
 
 
-let ctx = Run.make_context();
-
-
-let input = BsLittleParser.Input.{text: source, index: 0, whitespace: " \n"};
+let input = Input.{
+  text: source,
+  index: 0,
+  whitespace: " \n",
+  context: Context.create(Run.stdlib)
+};
 
 let cap = regex([%bs.re "/[A-Z][a-zA-Z_0-9]*/"]);
-let idf = regex([%bs.re "/[a-z][a-zA-Z\\-0-9]*/"]);
+let idf = regex([%bs.re "/[a-z][a-zA-Z_0-9]*/"]);
 
 let str = regex([%bs.re "/\"[^\"]*\"/"]) ^^^ (x => T.Str(x));
 let num = regex([%bs.re "/[1-9][0-9]*/"]) ^^^ (x => T.Num(x |> int_of_string));
 
 let literal = (str <|> num) ^^^ (x => T.Literal(x));
 
-let mod_ = cap ^^^ (x => T.Module(x));
-
-let modFn = (mod_ <* chr('.') <*> idf) ^^^ ((T.Module(mName),fName)) => {
-  ctx.modules |> Context.lookup(mName, fName)
+let modFn = (cap <* chr('.') <*> idf) ^^> (ctx, (mName,fName)) => {
+  (ctx, ctx |> Context.lookup(mName, fName))
 };
 
-let pop = (chr('_') <* notPred(regex([%bs.re "/[a-zA-Z_0-9]/"]))) ^^^ (_x => T.Pop);
+let pop = (chr('_') <* notPred(regex([%bs.re "/[a-zA-Z_0-9]/"]))) ^^^ ((_) => T.Pop);
 
 
 /* Crude hack to solve mutual recursion */
-let inv_ : unit => (BsLittleParser.Input.t => BsLittleParser.ParseResult.t(T.term))
+let inv_ : unit => (Input.t => ParseResult.t(T.term))
   = [%raw {| function() { return inv } |}];
 
 
@@ -98,15 +117,20 @@ let argList = (chr('(') *> args <* chr(')'));
 let inv = (modFn <*> argList) ^^^ ( ((fn, args)) => T.Inv(fn, args) );
 
 
-
-let program = rep(term) ^^^ (terms => T.Seq(terms, Type.Bottom));
+let program = rep(term) ^^> ((ctx, terms) => {
+  let seq = T.Seq(terms);
+  let (ctx2, ty) = T.getType(ctx, seq);
+  (ctx2, (seq, ty))
+});
 
 
 let subresult = input |> program;
 
-let result = subresult |> BsLittleParser.ParseResult.getResult;
+let result = subresult |> ParseResult.getResult;
 
 switch (result) {
-| Some(term) => T.print(term) |> Js.log
+| Some((_ctx, (seq, ty))) =>
+    T.print(seq) |> Js.log;
+    Type.print(ty) |> Js.log
 | None => Js.log("Nothin")
 };
