@@ -1,12 +1,12 @@
 
-let stdlib = Context.[
+let stdlib = T.[
   Module("String", [
-    FnDef("split", Type.(Type.Fn([Str,Str], Arr(Str))) )
+    FnDef("split", Fn([Str,Str], Arr(Str)) )
   ]),
   Module("IO", [
-    FnDef("log", Type.DepType("IO.log", args => switch (args |> List.length) {
-    | 0 => raise(Type.TypeError("IO.log requires at least one argument"))
-    | _ => Type.Unit
+    FnDef("log", DepType("IO.log", args => switch (args |> List.length) {
+    | 0 => raise(TypeError("IO.log requires at least one argument"))
+    | _ => Unit
     }))
   ]),
 ];

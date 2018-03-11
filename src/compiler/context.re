@@ -1,17 +1,10 @@
 
-type fnDef = FnDef(string, Type.t);
-type module_ = Module(string, list(fnDef));
-
-type fn = Fn(module_, fnDef);
-type var = Var(string, Type.t);
-
 type single_context = {
-  vars: list(var),
-  rtStack: list(Type.t)
+  rtStack: list(T.ty)
 };
 
 type t = {
-  modules: list(module_),
+  modules: list(T.module_),
   stacks: list(single_context)
 };
 
@@ -33,7 +26,7 @@ let popType = (ctx) => {
   let s_ctx = List.hd(ctx.stacks);
   switch (s_ctx.rtStack) {
   | [top, ...rest] => ({ ...ctx, stacks: [{ ...s_ctx, rtStack: rest }, ...List.tl(ctx.stacks)] }, top)
-  | _ => raise(Type.TypeError("Runtime stack is empty!"))
+  | _ => raise(T.TypeError("Runtime stack is empty!"))
   }
 };
 
@@ -43,15 +36,15 @@ let topType = (ctx) =>
 
 let create = (mods) => {
   modules: mods,
-  stacks: [{ vars: [], rtStack: [] }]
+  stacks: [{ rtStack: [] }]
 };
 
 let lookup = (modName, fnName, ctx) => {
-  let m = try(ctx.modules |> List.find((Module(name_,_)) => name_ == modName)) {
-  | Not_found => raise(Type.TypeError("No such module: " ++ modName))
+  let m = try(ctx.modules |> List.find((T.Module(name_,_)) => name_ == modName)) {
+  | Not_found => raise(T.TypeError("No such module: " ++ modName))
   };
   let f = switch (m) {
-    | Module(_,fns) => fns |> List.find((FnDef(name_,_)) => name_ == fnName)
+    | T.Module(_,fns) => fns |> List.find((T.FnDef(name_,_)) => name_ == fnName)
   };
-  Fn(m,f)
+  T.Fn(m,f)
 };
