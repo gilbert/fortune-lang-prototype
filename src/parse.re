@@ -38,7 +38,7 @@ let num = regex([%bs.re "/[1-9][0-9]*/"]) ^^^ (x => T.NumLit(x |> int_of_string)
 let literal = (str <|> num) ^^^ (x => T.Literal(x));
 
 let modFn = (cap <* chr('.') <*> idf) ^^> (ctx, (mName,fName)) => {
-  (ctx, ctx |> Context.lookup(mName, fName))
+  (ctx, Context.lookup(ctx, mName, fName))
 };
 
 let pop = (chr('_') <* notPred(regex([%bs.re "/[a-zA-Z_0-9]/"]))) ^^^ ((_) => T.Pop);
@@ -47,19 +47,27 @@ let pop = (chr('_') <* notPred(regex([%bs.re "/[a-zA-Z_0-9]/"]))) ^^^ ((_) => T.
 /* Crude hack to solve mutual recursion */
 let inv_ : unit => (Input.t => ParseResult.t(T.term))
   = [%raw {| function() { return inv } |}];
+let block_ : unit => (Input.t => ParseResult.t(T.term))
+  = [%raw {| function() { return block } |}];
 
 
 let term = literal <|> pop <|>| inv_;
 
-let args = (term <*> rep(chr(',') *> term))
+let arg = term <|>| block_;
+
+let args = (arg <*> rep(chr(',') *> arg))
        ^^^ ((first, rest)) => [first, ...rest];
 
 let argList = (chr('(') *> args <* chr(')'));
 
 let inv = (modFn <*> argList) ^^^ ( ((fn, args)) => T.Inv(fn, args) );
 
+let seq = rep(term);
 
-let program = rep(term) ^^> ((ctx, terms) => {
+let block = (chr('[') *> seq <* chr(']')) ^^^ (terms => T.BlockTerm(terms));
+
+
+let program = seq ^^> ((ctx, terms) => {
   let seq = T.Seq(terms);
   let (ctx2, ty) = Term.getType(ctx, seq);
   (ctx2, (seq, ty))

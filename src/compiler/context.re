@@ -1,28 +1,26 @@
 
-type single_context = {
-  rtStack: list(T.ty)
-};
+type t = T.context;
+type st = T.single_context;
 
-type t = {
-  modules: list(T.module_),
-  stacks: list(single_context)
-};
-
-let push = (ctx, s_ctx) => {
+let push = (ctx : t, s_ctx) => {
   ...ctx,
   stacks: [s_ctx, ...ctx.stacks]
 };
 
-let pushType_ = (single_ctx, ty) => {
+let pushNewSingle = (ctx) => push(ctx, {
+  rtStack: []
+});
+
+let pushType_ = (single_ctx : st, ty) => {
   ...single_ctx,
   rtStack: [ty, ...single_ctx.rtStack]
 };
-let pushType = (ctx, ty) => {
+let pushType = (ctx : t, ty) => {
   ...ctx,
   stacks: [ty |> pushType_(ctx.stacks |> List.hd), ...ctx.stacks]
 };
 
-let popType = (ctx) => {
+let popType = (ctx : t) => {
   let s_ctx = List.hd(ctx.stacks);
   switch (s_ctx.rtStack) {
   | [top, ...rest] => ({ ...ctx, stacks: [{ ...s_ctx, rtStack: rest }, ...List.tl(ctx.stacks)] }, top)
@@ -30,16 +28,19 @@ let popType = (ctx) => {
   }
 };
 
-let topType = (ctx) =>
+let topType = (ctx : t) =>
   List.hd(ctx.stacks).rtStack
   |> List.hd;
 
 let create = (mods) => {
-  modules: mods,
-  stacks: [{ rtStack: [] }]
+  let result : t = {
+    modules: mods,
+    stacks: [{ rtStack: [] }]
+  };
+  result
 };
 
-let lookup = (modName, fnName, ctx) => {
+let lookup = (ctx : t, modName, fnName) => {
   let m = try(ctx.modules |> List.find((T.Module(name_,_)) => name_ == modName)) {
   | Not_found => raise(T.TypeError("No such module: " ++ modName))
   };
