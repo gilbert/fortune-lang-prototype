@@ -8,7 +8,8 @@ let push = (ctx : t, s_ctx) => {
 };
 
 let pushNewSingle = (ctx) => push(ctx, {
-  rtStack: []
+  rtStack: [],
+  tyVars: []
 });
 
 let pushType_ = (single_ctx : st, ty) => {
@@ -17,7 +18,16 @@ let pushType_ = (single_ctx : st, ty) => {
 };
 let pushType = (ctx : t, ty) => {
   ...ctx,
-  stacks: [ty |> pushType_(ctx.stacks |> List.hd), ...ctx.stacks]
+  stacks: [ty |> pushType_(ctx.stacks |> List.hd), ...List.tl(ctx.stacks)]
+};
+
+let pushTypeVar_ = (single_ctx : st, tvars) => {
+  ...single_ctx,
+  tyVars: List.append(tvars, single_ctx.tyVars)
+};
+let pushTypeVars = (ctx : t, tvars) => {
+  ...ctx,
+  stacks: [tvars |> pushTypeVar_(ctx.stacks |> List.hd), ...List.tl(ctx.stacks)]
 };
 
 let popType = (ctx : t) => {
@@ -35,7 +45,7 @@ let topType = (ctx : t) =>
 let create = (mods) => {
   let result : t = {
     modules: mods,
-    stacks: [{ rtStack: [] }]
+    stacks: [{ rtStack: [], tyVars: [] }]
   };
   result
 };
@@ -45,7 +55,19 @@ let lookup = (ctx : t, modName, fnName) => {
   | Not_found => raise(T.TypeError("No such module: " ++ modName))
   };
   let f = switch (m) {
-    | T.Module(_,fns) => fns |> List.find((T.FnDef(name_,_)) => name_ == fnName)
+    | T.Module(_,fns) => try(fns |> List.find((T.FnDef(name_,_)) => name_ == fnName)) {
+      | Not_found => raise(T.TypeError("No such function: " ++ modName ++ "." ++ fnName))
+      }
   };
   T.Fn(m,f)
 };
+
+
+let rec lookupTyVar_ = (stacks : list(st), id, name) => switch (stacks) {
+  | [top, ...rest] => try(List.assoc(id, top.tyVars)) {
+    | Not_found => lookupTyVar_(rest, id, name)
+  }
+  | [] => raise(T.TypeError("No such type variable: " ++ name))
+};
+
+let lookupTyVar = (ctx : t, id, name) => lookupTyVar_(ctx.stacks, id, name);

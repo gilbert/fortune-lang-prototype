@@ -30,7 +30,7 @@ let input = Input.{
 };
 
 let cap = regex([%bs.re "/[A-Z][a-zA-Z_0-9]*/"]);
-let idf = regex([%bs.re "/[a-z][a-zA-Z_0-9]*/"]);
+let idf = regex([%bs.re "/[a-z][a-zA-Z_0-9]*[?]?/"]);
 
 let str = regex([%bs.re "/\"[^\"]*\"/"]) ^^^ (x => T.StrLit(x));
 let num = regex([%bs.re "/[1-9][0-9]*/"]) ^^^ (x => T.NumLit(x |> int_of_string));
@@ -69,7 +69,7 @@ let block = (chr('[') *> seq <* chr(']')) ^^^ (terms => T.BlockTerm(terms));
 
 let program = seq ^^> ((ctx, terms) => {
   let seq = T.Seq(terms);
-  let (ctx2, ty) = Term.getType(ctx, seq);
+  let (ctx2, ty) = Apply.getType(ctx, seq);
   (ctx2, (seq, ty))
 });
 
