@@ -36,6 +36,7 @@ let rec getType = (ctx : Context.t, term) => switch(term) {
 
     let (_subs, ctx4, ty2) = apply([], ctx3, ty, argTypes |> List.rev);
     (ctx4, ty2)
+| BranchInv(_, _) => (ctx, Unit)
 | Seq(terms) =>
     let ctx2 = consume(ctx, terms);
     (ctx2, ctx2 |> Context.topType)
@@ -50,8 +51,8 @@ and consume = (context : Context.t, terms) => {
 }
 
 and apply = (subs, ctx, ftype, args) => switch (ftype) {
-| T.BasicFn(vars, params, ret) => {
-  let (subs2, ctx2) = unify_all([], vars |> Context.pushTypeVars(ctx), zip(params,args));
+| T.BasicFn(params, ret) => {
+  let (subs2, ctx2) = unify_all([], ctx, zip(params,args));
   (subs2, ctx2, ret |> sub(subs2))
 }
 
@@ -70,7 +71,9 @@ and unify_all = (subs, ctx, tpairs) => switch (tpairs) {
   | [] => (subs, ctx)
 }
 
-and unify = (subs, ctx, a, b) => switch (a,b) {
+and unify = (subs, ctx, a, b) => {
+  Js.log("Unifying " ++ print(a) ++ " and " ++ print(b));
+switch (a,b) {
   | (Var(x,xn), Var(y,yn)) => if (x == y) {
     (subs, ctx)
   } else {
@@ -78,6 +81,23 @@ and unify = (subs, ctx, a, b) => switch (a,b) {
   }
   | (Var(x,_), _) => ([(x,b),...subs], ctx)
   | (_,Var(_,_)) => unify(subs, ctx, b, a)
+  | (BranchBlock(ty, AnyBranch), UBlock(terms)) =>
+    /* Ensure block ends up branching */
+    let inputTy = switch (ty) {
+      | Var(id,name) => try(List.assoc(id, subs)) {
+        | Not_found => raise(TypeError("Unresolved branch block input type: " ++ name))
+      }
+      | _ => ty
+    };
+    let ctx2 = ctx
+      |> Context.pushNewSingle
+      |> switch(inputTy){ | Unit => (x=>x) | _ => Context.pushType(_, inputTy) }
+      |> consume(_, terms);
+
+    (subs, ctx2)
+  | (BranchBlock(_ty, _branch), UBlock(_terms)) =>
+    /* TODO: Ensure matching branch */
+    (subs, ctx)
   | (Block(Var(id1,name1),Var(id2,_name2)), UBlock(terms)) =>
     /* id1 needs to be a concrete type so we can resolve the block */
     let inputTy = try(List.assoc(id1, subs)) {
@@ -106,4 +126,4 @@ and unify = (subs, ctx, a, b) => switch (a,b) {
     }
   | (Str,Str) | (Num,Num) | (Bool,Bool) => (subs, ctx)
   | _ => raise(TypeError("Incompatible types: " ++ print(a) ++ " != " ++ print(b)))
-};
+}};

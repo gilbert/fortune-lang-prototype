@@ -42,8 +42,9 @@ let topType = (ctx : t) =>
   List.hd(ctx.stacks).rtStack
   |> List.hd;
 
-let create = (mods) => {
+let create = (branches, mods) => {
   let result : t = {
+    branches: branches,
     modules: mods,
     stacks: [{ rtStack: [], tyVars: [] }]
   };
@@ -60,6 +61,19 @@ let lookup = (ctx : t, modName, fnName) => {
       }
   };
   T.Fn(m,f)
+};
+
+
+let lookupBranchFn = (ctx : t, modName, fnName) => {
+  let m = try(ctx.branches |> List.find((T.Module(name_,_)) => name_ == modName)) {
+  | Not_found => raise(T.TypeError("No such branch module: " ++ modName))
+  };
+  let f = switch (m) {
+    | T.Module(_,fns) => try(fns |> List.find((T.BranchDef(name_,_)) => name_ == fnName)) {
+      | Not_found => raise(T.TypeError("No such branch function: " ++ modName ++ "." ++ fnName))
+      }
+  };
+  T.BranchFn(m,f)
 };
 
 

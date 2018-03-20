@@ -7,6 +7,10 @@ let rec print = (term) => switch(term) {
   | Pop => "_"
   | Inv(Fn(Module(mod_,_), FnDef(fun_, _)), args) =>
       mod_ ++ "." ++ fun_ ++ "(" ++ print_terms(args, ", ") ++ ")"
+  | BranchInv(AnyBranch, _) =>
+      "@branch(any)"
+  | BranchInv(BranchFn(Module(mod_,_), BranchDef(fun_,_)), args) =>
+      "@branch " ++ mod_ ++ "." ++ fun_ ++ "(" ++ print_terms(args, ", ") ++ ")"
   | Seq(terms) => print_terms(terms, " ")
 }
 and print_terms = (terms, sep) => switch (List.length(terms)) {
