@@ -76,7 +76,7 @@ Several interesting features are being used in the above example:
 - By passing `branch:` also, Fortune validates that the source code to finalize
   - A `@branch` halts Fortune execution, passing control to the function's module
   - In this case, branches help ensure the untrusted code can only send back one HTTP response.
-- By passing a context to `Forune.run`, our module functions gain access to it via `this`.
+- By passing a context to `Fortune.run`, our module functions gain access to it via `this`.
 
 ## Syntax Overview
 
