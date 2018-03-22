@@ -42,11 +42,11 @@ let topType = (ctx : t) =>
   List.hd(ctx.stacks).rtStack
   |> List.hd;
 
-let create = (branches, mods) => {
+let create = (branches, mods, stack) => {
   let result : t = {
     branches: branches,
     modules: mods,
-    stacks: [{ rtStack: [], tyVars: [] }]
+    stacks: [{ rtStack: stack, tyVars: [] }]
   };
   result
 };

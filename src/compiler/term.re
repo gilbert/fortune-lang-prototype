@@ -3,6 +3,7 @@ open T;
 let rec print = (term) => switch(term) {
   | Literal(StrLit(s)) => "Lit(\"" ++ s ++ "\")"
   | Literal(NumLit(n)) => "Lit(" ++ string_of_int(n) ++ ")"
+  | Literal(ArrLit(t)) => "Lit(@{" ++ print_terms(t,",") ++ "})"
   | BlockTerm(terms) => "[" ++ print_terms(terms, " ") ++ "]"
   | Pop => "_"
   | Inv(Fn(Module(mod_,_), FnDef(fun_, _)), args) =>

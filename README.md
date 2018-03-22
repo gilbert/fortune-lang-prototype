@@ -20,8 +20,8 @@ const source = `
   Arr.map [Str.capitalize]
   Str.join(" ").add("!")
 `
-const instructions = Fortune.compile(source)
-Fortune.run(instructions) //=> ["Hello World!"]
+const program = Fortune.compile(source)
+Fortune.run(program) //=> ["Hello World!"]
 ```
 
 After guaranteeing the code is type safe, compiling will return instruction code (as JSON) that you can run immediately or save in the database to run later.
@@ -60,13 +60,13 @@ const modules = {
     }
   }
 }
-const instructions = Fortune.compile(untrustedSource, {
+const program = Fortune.compile(untrustedSource, {
   modules: modules,
   branch: modules.Server
 })
 
 const args = { username: "alice" }
-Fortune.run(source, args, { context: { res: ... } })
+Fortune.run(program, args, { res: ... })
 ```
 
 Several interesting features are being used in the above example:
@@ -95,8 +95,8 @@ Fortune supports JSON primitives:
 null
 true
 10100
-Arr("an", "array")
-{ an: "object", with: "multiple", "pro-ps": 99 }
+@{"an", "array"}
+{ an: "object", with: "multiple", "props": 99 }
 ```
 
 ### Function Calls

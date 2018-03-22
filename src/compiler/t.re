@@ -1,11 +1,19 @@
 exception TypeError(string);
 
+let id_counter = ref(0);
+
+let next_id = () => {
+  id_counter := id_counter^ + 1;
+  id_counter^
+};
+
 
 type literal =
   | StrLit(string)
-  | NumLit(int);
+  | ArrLit(list(term))
+  | NumLit(int)
 
-type ty =
+and ty =
   | Str
   | Num
   | Bool

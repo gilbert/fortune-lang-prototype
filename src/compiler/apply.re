@@ -25,6 +25,24 @@ let rec sub = (subs, ty) => switch (ty) {
 let rec getType = (ctx : Context.t, term) => switch(term) {
 | Literal(StrLit(_)) => (ctx, Str)
 | Literal(NumLit(_)) => (ctx, Num)
+| Literal(ArrLit(terms)) =>
+  if (terms |> List.length == 0) {
+    (ctx, TypeCon("Array", [|Var(next_id(), "i")|]))
+  }
+  else {
+    let (ctx3, termTypes) = terms
+    |> List.fold_left( ((ctx,tys), term) => {
+        let (ctx2, ty) = getType(ctx, term);
+        (ctx2, [ty, ...tys])
+      }, (ctx,[]));
+
+    let (ctx5, itemType) = termTypes
+    |> List.fold_left( ((ctx, prev), termType) => {
+        let (subs, ctx4) = unify([], ctx, prev, termType);
+        (ctx4, termType |> sub(subs))
+      }, (ctx3, List.hd(termTypes)));
+    (ctx, TypeCon("Array", [|itemType|]))
+  }
 | Pop => Context.popType(ctx)
 | BlockTerm(terms) => (ctx, UBlock(terms))
 | Inv(Fn(_, FnDef(_, ty)), args) =>
@@ -72,7 +90,7 @@ and unify_all = (subs, ctx, tpairs) => switch (tpairs) {
 }
 
 and unify = (subs, ctx, a, b) => {
-  Js.log("Unifying " ++ print(a) ++ " and " ++ print(b));
+  /*Js.log("Unifying " ++ print(a) ++ " and " ++ print(b));*/
 switch (a,b) {
   | (Var(x,xn), Var(y,yn)) => if (x == y) {
     (subs, ctx)
