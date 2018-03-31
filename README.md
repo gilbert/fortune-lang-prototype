@@ -105,13 +105,13 @@ true
 All available functions exist in a module. Here are some of the built-in ones:
 
 ```js
-Str.split(" ", "hello there") //=> Arr("hello", "there")
+Str.split("hello there", " ") //=> Arr("hello", "there")
 
 // _ means "pop from the stack".
 // This example puts "hello" on the stack
 // and then feeds it to Str.split
 "hello"
-Str.split(" ", _) //=> Arr("hello", "there")
+Str.split(_, " ") //=> Arr("hello", "there")
 
 // Some functions implicitly pop from the stack for convenience,
 // and Str.split is one of them. You can write the above like so:
@@ -120,9 +120,28 @@ Str.split(" ") //=> Arr("hello", "there")
 
 // If a function only takes one argument,
 // it can always implicitly pop from the stack.
-// In this cane you can leave out parenthesis.
+// You can leave out the parenthesis!
 "alice"
 Str.capitalize //=> "Alice"
+```
+
+If you have multiple function calls on the same module, you can chain them together without repeating the module name:
+
+```js
+// Instead of writing this...
+Database.query
+Database.table(_, "users")
+Database.select(_, "id", @Num(1, @num_max))
+Database.select(_, "name", @Str(1,255))
+Database.exec(_)
+
+// ...you can write this!
+Database
+  .query
+  .table("users")
+  .select("id", @Num(1, @num_max))
+  .select("name", @Str(1,255))
+  .exec
 ```
 
 ### Function Calls: Blocks
