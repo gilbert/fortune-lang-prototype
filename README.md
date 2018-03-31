@@ -95,7 +95,8 @@ Fortune supports JSON primitives:
 null
 true
 10100
-@{"an", "array"}
+@Arr("an", "array")
+@List("a", "list")
 { an: "object", with: "multiple", "props": 99 }
 ```
 

@@ -18,14 +18,106 @@ module MakeParser = (C: ContextI) => {
     };
   };
 
+  /** internal use only */
+  let skipWhitespace = (whitepspace: string, input: Input.t) => {
+    let rec listChar = str =>
+      switch (str) {
+      | "" => []
+      | str => [
+          str.[0],
+          ...listChar(String.sub(str, 1, String.length(str) - 1)),
+        ]
+      };
+    let spaceChars = listChar(whitepspace);
+    let rec contain = (chr, charList) =>
+      switch (charList) {
+      | [] => false
+      | [c, ...tl] =>
+        if (chr === c) {
+          true;
+        } else {
+          contain(chr, tl);
+        }
+      };
+    let rec loop = (input: Input.t) =>
+      if (String.length(input.text) <= input.index) {
+        input;
+      } else if (contain(input.text.[input.index], spaceChars)) {
+        loop({...input, index: input.index + 1});
+      } else {
+        input;
+      };
+    loop(input);
+  };
+
   module ParseResult = {
+    type result('a,'e) =
+      | Ok('a)
+      | Err('e);
     type t('a) =
       | ParseSuccess('a, Input.t)
       | ParseFailure(string, Input.t);
+
+    type syntax_err = SyntaxErr(int, int, string);
+
     let getResult = parseResult =>
       switch (parseResult) {
-      | [@implicit_arity] ParseSuccess(p, q) => Some((q.context, p))
-      | [@implicit_arity] ParseFailure(_, _) => None
+      | [@implicit_arity] ParseSuccess(p, q) when q.index < String.length(q.text) - 1 =>
+        let sourceLen = String.length(q.text);
+        let no_ws = skipWhitespace(q.whitespace, q);
+        if (no_ws.index == sourceLen) {
+          /* Rest was just whitespace. Success! */
+          Ok((q.context, p))
+        }
+        else {
+          /* Use input that has no leading whitespace */
+          let q = no_ws;
+          Js.log("Parse unsuccessful");
+          Js.log(q.index);
+          Js.log(String.length(q.text));
+          /* We got ourselves a syntax error */
+          /* Calculate actual line and col */
+          let line = ref(0);
+          let col = ref(q.index);
+          let total = ref(q.index);
+          let cosuming_ws = ref(true);
+
+          q.text
+          |> String.iteri((i,c) => {
+              if (c == '\n' && cosuming_ws^ == true) {
+                line := line^ + 1;
+                col  := 1;
+              }
+              else if (c == ' ' && cosuming_ws^ == true) {
+                col  := col^ + 1;
+              };
+              if ( i < q.index ) {
+                () /* Do nothing */
+              }
+              else if (c != '\n' && c != ' ' && cosuming_ws^ == true) {
+                cosuming_ws := false;
+                Js.log("hrm");
+                Js.log(i);
+                Js.log(q.index);
+                total := i - q.index;
+              }
+            });
+          let eol = try(String.index_from(q.text, total^, '\n')) {
+            | Not_found =>
+              total := q.index + col^;
+              sourceLen
+          };
+          Js.log("----"); let i=q.index;
+          Js.log({j| index $i line $line col $col total $total eol $eol |j});
+
+          let msg = "Unrecognize syntax (starting "++string_of_int(line^ + 1)++" col "++string_of_int(col^ + 1) ++ ")"
+            ++ "\n" ++ String.sub(q.text, q.index + total^ - col^, eol - total^ + col^ - q.index)
+            ++ "\n" ++ String.make(col^, ' ') ++ "^";
+
+          Err(SyntaxErr(line^ + 1,col^ + 1,msg))
+        }
+      | [@implicit_arity] ParseSuccess(p, q) => Ok((q.context, p))
+      | [@implicit_arity] ParseFailure(_, _) => Err(SyntaxErr(1,1, "No matches anywhere"))
       };
     let getIndex = parseResult =>
       switch (parseResult) {
@@ -145,37 +237,6 @@ module MakeParser = (C: ContextI) => {
   let mapNoContext = (p, fn, input) => ParseResult.mapNoContext(fn, p(input));
   let (^^^) = (p, fn) => mapNoContext(p, fn);
 
-  /** internal use only */
-  let skipWhitespace = (whitepspace: string, input: Input.t) => {
-    let rec listChar = str =>
-      switch (str) {
-      | "" => []
-      | str => [
-          str.[0],
-          ...listChar(String.sub(str, 1, String.length(str) - 1)),
-        ]
-      };
-    let spaceChars = listChar(whitepspace);
-    let rec contain = (chr, charList) =>
-      switch (charList) {
-      | [] => false
-      | [c, ...tl] =>
-        if (chr === c) {
-          true;
-        } else {
-          contain(chr, tl);
-        }
-      };
-    let rec loop = (input: Input.t) =>
-      if (String.length(input.text) <= input.index) {
-        input;
-      } else if (contain(input.text.[input.index], spaceChars)) {
-        loop({...input, index: input.index + 1});
-      } else {
-        input;
-      };
-    loop(input);
-  };
   let charParser = (c, rawInput: Input.t) => {
     let input = skipWhitespace(rawInput.whitespace, rawInput);
     String.length(input.text) <= input.index ?

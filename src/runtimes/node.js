@@ -13,7 +13,7 @@ exports.stdlib = {
   modules: {
     Str: {
       split: {
-        run(sep, str) { return str.split(sep) },
+        run(str, sep) { return str.split(sep) },
       },
       upcase: {
         run(str) { return str.toUpperCase() },

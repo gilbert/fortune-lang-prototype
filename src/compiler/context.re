@@ -39,8 +39,9 @@ let popType = (ctx : t) => {
 };
 
 let topType = (ctx : t) =>
-  List.hd(ctx.stacks).rtStack
-  |> List.hd;
+  try(List.hd(ctx.stacks).rtStack |> List.hd) {
+    | Failure("hd") => T.Unit
+  };
 
 let create = (branches, mods, stack) => {
   let result : t = {

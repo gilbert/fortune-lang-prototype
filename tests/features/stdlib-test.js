@@ -5,7 +5,7 @@ o.spec('String', function(){
   o('split', function(){
     var result = lib.compileAndRun(`
       "hello there"
-      Str.split(" ", _)
+      Str.split(_, " ")
     `)
     o(result).deepEquals(["hello", "there"])
   })
@@ -37,11 +37,11 @@ o.spec('Num', function(){
 
 o.spec('Arr', function(){
   o('get', function(){
-    var result = lib.compileAndRun(`@{10,20} Arr.get(_,1)`)
+    var result = lib.compileAndRun(`@Arr(10,20) Arr.get(_,1)`)
     o(result).deepEquals(20)
   })
   o('map', function(){
-    var result = lib.compileAndRun(`@{10,20} Arr.map(_,[Num.add(1,_)])`)
+    var result = lib.compileAndRun(`@Arr(10,20) Arr.map(_,[Num.add(1,_)])`)
     o(result).deepEquals([11,21])
   })
 })
@@ -83,7 +83,7 @@ o.spec('Maybe', function(){
 
 o.spec('IO', function(){
   o('log', function(){
-    var result = lib.compileAndRun(`IO.log("5", 10, @{15})`)
+    var result = lib.compileAndRun(`IO.log("5", 10, @Arr(15))`)
     o(result).deepEquals(undefined)
   })
 })

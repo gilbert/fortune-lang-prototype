@@ -1,8 +1,40 @@
 open T;
 
+let num = x => Js.Json.number(x |> float_of_int);
+
+let compileConstNumType = (n) => Js.Json.(switch(n) {
+  | ConstNum(n) => num(n)
+  | ConstNumVar(id, name) => array([| string("cvar"), num(id), string(name) |])
+});
+
+let compileRangeValType = (val_) => Js.Json.(switch(val_) {
+  | RangeVal(n) => compileConstNumType(n)
+  | RangeAdd(x,y) => array([| string("radd"), compileConstNumType(x), compileConstNumType(y) |])
+  | RangeValMax => array([| string("rmax") |])
+});
+
+let compileRangeType = (Range(x,y)) =>
+  Js.Json.array([| compileRangeValType(x), compileRangeValType(y) |]);
+
+/* TODO: Fill out rest of types */
+let rec compileType = (ty) => Js.Json.(switch (ty) {
+  | Num => array([| string("Num") |])
+  | NumConst(ConstNum(n)) => array([| string("NumConst"), num(n) |])
+  | NumConst(ConstNumVar(id,name)) => array([| string("NumConstVar"), num(id), string(name) |])
+  | Bool => array([| string("Bool") |])
+  | Str(range) => array([| string("Str"), compileRangeType(range) |])
+  | Arr(t,range) =>
+    array([|
+      string("Arr"),
+      compileType(t),
+      compileRangeType(range)
+    |])
+});
+
+
 let rec compileAst = (term) => Js.Json.(switch (term) {
 | Literal(StrLit(s)) => array([|string("lit"), string(s)|])
-| Literal(NumLit(n)) => array([|string("lit"), number(n |> float_of_int)|])
+| Literal(NumLit(n)) => array([|string("lit"), num(n)|])
 | Literal(ArrLit(t)) =>
   array([|
     string("arr"),

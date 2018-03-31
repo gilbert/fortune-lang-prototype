@@ -3,10 +3,24 @@ open DepTypeUtil;
 let stdlib = T.{
   modules: [
     Module("Str", [
-      FnDef("split", BasicFn([Str,Str], TypeCon("Array", [|Str|])) ),
-      FnDef("upcase", BasicFn([Str], Str) ),
-      FnDef("cap", BasicFn([Str], Str) ),
-      FnDef("toNum", BasicFn([Str], TypeCon("Maybe", [|Num|])) )
+      FnDef("split", {
+        let s1var = ConstNumVar(next_id(), "s1");
+        let s1 = makeRangeV(ConstNum(0), s1var);
+        let s2 = makeRangeV(ConstNum(0), ConstNumVar(next_id(), "s2"));
+        BasicFn([Str(s1),Str(s2)], Arr(Str(s1), Range(RangeVal(ConstNum(1)), RangeAdd(s1var, ConstNum(1)))))
+      }),
+      FnDef("upcase", {
+        let s = Str(makeRangeV(ConstNum(0), ConstNumVar(next_id(), "n")));
+        BasicFn([s], s)
+      }),
+      FnDef("cap", {
+        let s = Str(makeRangeV(ConstNum(0), ConstNumVar(next_id(), "n")));
+        BasicFn([s], s)
+      }),
+      FnDef("toNum", {
+        let s = Str(makeRangeV(ConstNum(0), ConstNumVar(next_id(), "n")));
+        BasicFn([s], TypeCon("Maybe", [|Num|]))
+      })
     ]),
     Module("Num", [
       FnDef("add", BasicFn([Num, Num], Num) ),
@@ -14,12 +28,14 @@ let stdlib = T.{
     Module("Arr", [
       FnDef("get", {
         let a = Var(next_id(), "a");
-        BasicFn([TypeCon("Array", [|a|]), Num], a)
+        let n = ConstNumVar(next_id(), "n");
+        BasicFn([Arr(a, makeRangeV(ConstNum(1), n)), NumConst(n)], a)
       }),
       FnDef("map", {
         let a = Var(next_id(), "a");
         let b = Var(next_id(), "b");
-        BasicFn([TypeCon("Array", [|a|]), Block(a,b)], TypeCon("Array", [|b|]))
+        let n = ConstNumVar(next_id(), "n");
+        BasicFn([Arr(a, makeRangeV(n,n)), Block(a,b)], Arr(b, makeRangeV(n,n)))
       }),
     ]),
     Module("IO", [
@@ -43,7 +59,10 @@ let stdlib = T.{
 
   branches: [
     Module("Program", [
-      BranchDef("exit", BasicFn([Str, Num], Num))
+      BranchDef("exit", {
+        let s = Str(Range(RangeVal(ConstNum(0)), RangeValMax));
+        BasicFn([s, Num], Num)
+      })
     ])
   ],
 

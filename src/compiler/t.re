@@ -7,6 +7,18 @@ let next_id = () => {
   id_counter^
 };
 
+type num_literal =
+  | ConstNum(int)
+  | ConstNumVar(int, string);
+
+type range_val =
+  | RangeVal(num_literal)
+  | RangeAdd(num_literal, num_literal)
+  | RangeValMax;
+
+type range = Range(range_val, range_val);
+let makeRangeV = (x,y) => Range(RangeVal(x), RangeVal(y));
+let makeRangeN = (n) => Range(RangeVal(ConstNum(n)), RangeVal(ConstNum(n)));
 
 type literal =
   | StrLit(string)
@@ -14,10 +26,12 @@ type literal =
   | NumLit(int)
 
 and ty =
-  | Str
+  | Str(range)
   | Num
   | Bool
+  | NumConst(num_literal)
   | BasicFn(list(ty), ty)
+  | Arr(ty, range)
   | TypeCon(string, array(ty))
   | DepType(string, ((context, list(ty))) => (context, ty))
   | Var(int, string)
@@ -55,13 +69,30 @@ and context = {
 let tyVarAssoc = List.map( (Var(id,name)) => (id,name) );
 
 
+let print_var = (id,name) => name ++ "." ++ string_of_int(id);
+
+let print_num_literal = (lit) => switch(lit) {
+  | ConstNum(n) => string_of_int(n)
+  | ConstNumVar(id, name) => print_var(id, name)
+};
+
+let print_range_val = (v) => switch(v) {
+  | RangeVal(v) => print_num_literal(v)
+  | RangeAdd(x,y) => print_num_literal(x) ++ " + " ++ print_num_literal(y)
+  | RangeValMax => "MAX"
+};
+let print_range = (Range(x,y)) => "[" ++ print_range_val(x) ++ ":" ++ print_range_val(y) ++ "]";
+
 let rec print = (ty) => switch(ty) {
-  | Str => "Str"
+  | Str(range) => "Str" ++ print_range(range)
   | Num => "Num"
   | Bool => "Bool"
-  | Var(id, num) => num ++ "." ++ string_of_int(id)
+  | NumConst(ConstNum(n)) => "Num(" ++ string_of_int(n) ++ ")"
+  | NumConst(ConstNumVar(id, name)) => "Num(" ++ print_var(id,name) ++ ")"
+  | Var(id, name) => print_var(id,name)
   | BasicFn(args, ret) => "(" ++ print_types(args, ", ") ++ ") => " ++ print(ret)
   | TypeCon(name, tys) => name ++ "(" ++ print_types(tys |> Array.to_list, ", ") ++ ")"
+  | Arr(ty, range) => "Arr(" ++ print(ty) ++ ")" ++ print_range(range)
   | DepType(name, _f) => "DepType(" ++ name ++ ")"
   | BranchBlock(ty, AnyBranch) =>
     "@branch(" ++ print(ty) ++ " -> any)"

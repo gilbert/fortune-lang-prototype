@@ -29,7 +29,7 @@ let cap = regex([%bs.re "/[A-Z][a-zA-Z_0-9]*/"]);
 let idf = regex([%bs.re "/[a-z][a-zA-Z_0-9]*[?!]?/"]);
 
 let str = regex([%bs.re "/\"[^\"]*\"/"]) ^^^ (x => T.StrLit( String.sub(x,1,String.length(x)-2) ));
-let num = regex([%bs.re "/[0-9][0-9]*/"]) ^^^ (x => T.NumLit(x |> int_of_string));
+let num = regex([%bs.re "/[0-9]+/"]) ^^^ (x => T.NumLit(x |> int_of_string));
 
 let kw = (word) => chr('@') *> Parser.str(word);
 
@@ -54,7 +54,7 @@ let args = (arg <*> rep(chr(',') *> arg))
 
 let argList = (chr('(') *> args <* chr(')'));
 
-let arr = (chr('@') *> chr('{') *> args <* chr('}')) ^^^ (terms => T.ArrLit(terms));
+let arr = (Parser.str("@Arr") *> argList) ^^^ (terms => T.ArrLit(terms));
 
 let inv = ((branchFn <*> argList) ^^^ (((fn, args)) => T.BranchInv(fn, args)))
 <|> ((modFn <*> argList) ^^^ (((fn, args)) => T.Inv(fn, args)));
@@ -66,6 +66,8 @@ let block = (chr('[') *> seq <* chr(']')) ^^^ (terms => T.BlockTerm(terms));
 
 let program = seq ^^> ((ctx, terms) => {
   let seq = T.Seq(terms);
+  Js.log("Got");
+  seq |> Ops.compileAst |> Js.log;
   let (ctx2, ty) = Apply.getType(ctx, seq);
   (ctx2, (seq, ty))
 });
@@ -81,10 +83,10 @@ let parse = (stack, source) => {
 
   let result = input |> program |> ParseResult.getResult;
   switch (result) {
-    | Some((_ctx, (seq, ty))) =>
-      ("success", [seq], [ty])
-    | None =>
-      ("error", [], [])
+    | Ok((_ctx, (seq, ty))) =>
+      ("success", [|seq|], [|ty|], "")
+    | Err(SyntaxErr(_line, _col, msg)) =>
+      ("error", [||], [||], msg)
   }
 };
 
