@@ -14,11 +14,19 @@ type num_literal =
 type range_val =
   | RangeVal(num_literal)
   | RangeAdd(num_literal, num_literal)
-  | RangeValMax;
+  | RangeValMax
+  | RangeValMin;
 
 type range = Range(range_val, range_val);
 let makeRangeV = (x,y) => Range(RangeVal(x), RangeVal(y));
 let makeRangeN = (n) => Range(RangeVal(ConstNum(n)), RangeVal(ConstNum(n)));
+let makeRangeAdd = (x1,y1,x2,y2) => Range(RangeAdd(x1,x2), RangeAdd(y1,y2));
+let makeRangeAny = (a,b) => Range(RangeVal(ConstNumVar(next_id(), a)), RangeVal(ConstNumVar(next_id(), b)));
+
+
+type tySpec =
+  | StrSpec(range)
+  | NumSpec(range);
 
 type literal =
   | StrLit(string)
@@ -27,9 +35,8 @@ type literal =
 
 and ty =
   | Str(range)
-  | Num
+  | Num(range)
   | Bool
-  | NumConst(num_literal)
   | BasicFn(list(ty), ty)
   | Arr(ty, range)
   | TypeCon(string, array(ty))
@@ -40,6 +47,7 @@ and ty =
   | UBlock(list(term)) /* Unresolved Block */
   | Block(ty, ty)
   | BranchBlock(ty, branchFn)
+  | TypeSpec(tySpec)
 
 and term =
   | Literal(literal)
@@ -85,10 +93,8 @@ let print_range = (Range(x,y)) => "[" ++ print_range_val(x) ++ ":" ++ print_rang
 
 let rec print = (ty) => switch(ty) {
   | Str(range) => "Str" ++ print_range(range)
-  | Num => "Num"
+  | Num(range) => "Num" ++ print_range(range)
   | Bool => "Bool"
-  | NumConst(ConstNum(n)) => "Num(" ++ string_of_int(n) ++ ")"
-  | NumConst(ConstNumVar(id, name)) => "Num(" ++ print_var(id,name) ++ ")"
   | Var(id, name) => print_var(id,name)
   | BasicFn(args, ret) => "(" ++ print_types(args, ", ") ++ ") => " ++ print(ret)
   | TypeCon(name, tys) => name ++ "(" ++ print_types(tys |> Array.to_list, ", ") ++ ")"
@@ -101,7 +107,9 @@ let rec print = (ty) => switch(ty) {
   | UBlock(_) => "UBlock"
   | Block(a,b) => "[" ++ print(a) ++ " -> " ++ print(b) ++ "]"
   | Unit => "unit"
-  | Hole => "?";
+  | Hole => "?"
+  | TypeSpec(StrSpec(r)) => "StrSpec" ++ print_range(r)
+  | TypeSpec(NumSpec(r)) => "NumSpec" ++ print_range(r);
 }
 and print_types = (types, sep) => switch (List.length(types)) {
   | 0 => ""

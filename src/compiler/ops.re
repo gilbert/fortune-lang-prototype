@@ -18,16 +18,20 @@ let compileRangeType = (Range(x,y)) =>
 
 /* TODO: Fill out rest of types */
 let rec compileType = (ty) => Js.Json.(switch (ty) {
-  | Num => array([| string("Num") |])
-  | NumConst(ConstNum(n)) => array([| string("NumConst"), num(n) |])
-  | NumConst(ConstNumVar(id,name)) => array([| string("NumConstVar"), num(id), string(name) |])
   | Bool => array([| string("Bool") |])
   | Str(range) => array([| string("Str"), compileRangeType(range) |])
+  | Num(range) => array([| string("Num"), compileRangeType(range) |])
   | Arr(t,range) =>
     array([|
       string("Arr"),
       compileType(t),
       compileRangeType(range)
+    |])
+  | TypeCon(name, tys) =>
+    array([|
+      string("TypeCon"),
+      string(name),
+      tys |> Array.map(compileType) |> array
     |])
 });
 

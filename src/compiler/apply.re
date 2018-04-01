@@ -33,6 +33,9 @@ let range_val_common = (subs, v1, v2) => switch (v1,v2) {
     else {
       (subs, v1)
     }
+  | (RangeAdd(ConstNumVar(id,_),ConstNum(n)), RangeVal(ConstNum(m)))
+  | (RangeAdd(ConstNum(n),ConstNumVar(id,_)), RangeVal(ConstNum(m))) =>
+    (subs |> push_range_sub(id, ConstNum(m - n)), v2)
   | _ => raise(TypeError("Invalid range comparison: " ++ print_range_val(v1) ++ " and " ++ print_range_val(v2)))
 };
 
@@ -54,6 +57,16 @@ let merge_ranges = (subs, Range(x1,y1), Range(x2,y2)) => {
   (subs3, Range(minVal,maxVal))
 };
 
+/* This is intended to be used after subs have been subbed */
+let merge_type_ranges = (ty1, ty2) => switch(ty1,ty2) {
+  | (Str(r1), Str(r2)) =>
+    let (_, r3) = merge_ranges(empty_subs,r1,r2); Str(r3)
+  | (Num(r1), Num(r2)) =>
+    let (_, r3) = merge_ranges(empty_subs,r1,r2); Num(r3)
+  | (Arr(a1, r1), Arr(_a2, r2)) =>
+    let (_, r3) = merge_ranges(empty_subs,r1,r2); Arr(a1, r3)
+  | _ => ty2
+};
 
 let rec zip_ = (xs, ys) => switch (xs, ys) {
   | ([x,...xs], [y,...ys]) => [(x,y), ...zip_(xs,ys)]
@@ -112,22 +125,14 @@ let rec sub = (subs, ty) => switch (ty) {
   | TypeCon(n, tys) => TypeCon(n, tys |> Array.map(sub(subs)))
   | Arr(ty, r) => Arr(ty |> sub(subs), r |> sub_range(subs))
   | Str(r) => Str(r |> sub_range(subs))
+  | Num(r) => Num(r |> sub_range(subs))
   | Block(a,b) => Block(a |> sub(subs), b |> sub(subs))
-  | NumConst(ConstNumVar(x, xn)) =>
-    NumConst(try(List.assoc(x, subs.constants)) {
-      | Not_found => raise(TypeError("Constant variable not found: " ++ xn))
-    })
-  | other => other
-};
-
-let downgrade_const = (ty) => switch(ty) {
-  | NumConst(_) => Num
   | other => other
 };
 
 let rec getType = (ctx : Context.t, term) => switch(term) {
 | Literal(StrLit(s)) => (ctx, Str(makeRangeN(s |> String.length)))
-| Literal(NumLit(n)) => (ctx, NumConst(ConstNum(n)))
+| Literal(NumLit(n)) => (ctx, Num(makeRangeN(n)))
 | Literal(ArrLit(terms)) =>
   let length = terms |> List.length;
   let n = ConstNum(length);
@@ -135,17 +140,20 @@ let rec getType = (ctx : Context.t, term) => switch(term) {
     (ctx, Arr(Var(next_id(), "i"), makeRangeV(n,n)))
   }
   else {
+    /* Get type of each term in the array literal */
     let (ctx3, termTypes) = terms
     |> List.fold_left( ((ctx,tys), term) => {
         let (ctx2, ty) = getType(ctx, term);
         (ctx2, [ty, ...tys])
       }, (ctx,[]));
 
+    /* Make sure all types are compatible */
     let (ctx5, itemType) = termTypes
     |> List.fold_left( ((ctx, prev), termType) => {
-        let (subs, ctx4) = unify(false, empty_subs, ctx, prev, termType);
-        (ctx4, termType |> sub(subs) |> downgrade_const)
+        let (subs, ctx4) = unify(empty_subs, ctx, prev, termType);
+        (ctx4, termType |> sub(subs) |> merge_type_ranges(prev))
       }, (ctx3, List.hd(termTypes)));
+
     (ctx5, Arr(itemType, makeRangeV(n,n)))
   }
 | Pop => Context.popType(ctx)
@@ -175,7 +183,7 @@ and consume = (context : Context.t, terms) => {
 
 and apply = (subs, ctx, ftype, args) => switch (ftype) {
 | T.BasicFn(params, ret) => {
-  let (subs2, ctx2) = unify_all(true, empty_subs, ctx, zip(params,args));
+  let (subs2, ctx2) = unify_all(empty_subs, ctx, zip(params,args));
   (subs2, ctx2, ret |> sub(subs2))
 }
 
@@ -186,23 +194,22 @@ and apply = (subs, ctx, ftype, args) => switch (ftype) {
 | _ => raise(T.TypeError("[apply] Type is not a function: " ++ T.print(ftype)))
 }
 
-and unify_all = (considerConstants, subs, ctx, tpairs) => switch (tpairs) {
+and unify_all = (subs, ctx, tpairs) => switch (tpairs) {
   | [(a1,a2), ...rest] => {
-    let (subs2, ctx2) = unify(considerConstants, subs, ctx, a1, a2);
-    unify_all(considerConstants, subs2, ctx2, rest)
+    let (subs2, ctx2) = unify(subs, ctx, a1, a2);
+    unify_all(subs2, ctx2, rest)
   }
   | [] => (subs, ctx)
 }
 
-and unify = (considerConstants, subs, ctx, a, b) => {
-  Js.log("Unifying " ++ print(a) ++ " and " ++ print(b) ++ (considerConstants ? " considering constants" : ""));
+and unify = (subs, ctx, a, b) => {
+  Js.log("Unifying " ++ print(a) ++ " and " ++ print(b));
 switch (a,b) {
   | (Var(x,xn), Var(y,yn)) => if (x == y) {
     (subs, ctx)
   } else {
     raise(TypeError("Incompatible type variables: " ++ xn ++ " != " ++ yn))
   }
-  | (Var(id,_), NumConst(_)) when ! considerConstants => (subs |> push_type_sub(id,Num), ctx)
   | (Var(id,_), _)
   | (_, Var(id,_)) => (subs |> push_type_sub(id,b), ctx)
   | (BranchBlock(ty, AnyBranch), UBlock(terms)) =>
@@ -244,33 +251,20 @@ switch (a,b) {
 
   | (TypeCon(con1,args1), TypeCon(con2,args2)) =>
     if (con1 == con2 && Array.length(args1) == Array.length(args2)) {
-      zip_(Array.to_list(args1),Array.to_list(args2)) |> unify_all(false, subs, ctx)
+      zip_(Array.to_list(args1),Array.to_list(args2)) |> unify_all(subs, ctx)
     } else {
       raise(TypeError("Constructors do not match"))
     }
   | (Arr(ty1, r1), Arr(ty2, r2)) =>
-    let (subs3, ctx3) = unify(false, subs, ctx, ty1, ty2);
+    let (subs3, ctx3) = unify(subs, ctx, ty1, ty2);
     unify_range(subs3, ctx3, r1, r2)
-  | (Num,Num) | (Bool,Bool) => (subs, ctx)
 
-  | (Str(r1),Str(r2)) =>
+  | (Num(r1),Num(r2))
+  | (Str(r1),Str(r2))
+  | (TypeSpec(NumSpec(r1)), TypeSpec(NumSpec(r2))) =>
     unify_range(subs, ctx, r1, r2)
 
-  /* WARNING: Const unification relies on the (params, arg) invariant */
-  | (NumConst(ConstNum(x)), NumConst(ConstNum(y)))
-    when considerConstants && x == y =>
-    (subs, ctx)
-  | (NumConst(ConstNum(n)), NumConst(ConstNumVar(id,_name)))
-  | (NumConst(ConstNumVar(id,_name)), NumConst(ConstNum(n)))
-    when considerConstants =>
-    (subs |> push_range_sub(id,ConstNum(n)), ctx)
-  | (NumConst(_), NumConst(_))
-  | (NumConst(_), Num)
-    when ! considerConstants => (subs, ctx)
-  | (Num, NumConst(_)) => (subs, ctx)
+  | (Bool,Bool) => (subs, ctx)
   | _ =>
-    raise(TypeError(
-      "Incompatible types: " ++ print(a) ++ " != " ++ print(b)
-      ++ (considerConstants ? " (considering constants)" : "")
-    ))
+    raise(TypeError("Incompatible types: " ++ print(a) ++ " != " ++ print(b)))
 }};

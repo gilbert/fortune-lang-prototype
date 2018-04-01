@@ -131,16 +131,16 @@ If you have multiple function calls on the same module, you can chain them toget
 // Instead of writing this...
 Database.query
 Database.table(_, "users")
-Database.select(_, "id", @Num(1, @num_max))
-Database.select(_, "name", @Str(1,255))
+Database.select(_, "id", Num.specMin(1))
+Database.select(_, "name", Str.spec(1,255))
 Database.exec(_)
 
 // ...you can write this!
 Database
   .query
   .table("users")
-  .select("id", @Num(1, @num_max))
-  .select("name", @Str(1,255))
+  .select("id", Num.specMin(1))
+  .select("name", Str.spec(1,255))
   .exec
 ```
 

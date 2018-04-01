@@ -21,8 +21,14 @@ o.spec('String', function(){
   })
 
   o('toNum', function(){
-    var result = lib.compileAndRun(`"10" Str.toNum(_)`)
+    var result = lib.compileAndRun(`"10" Str.toNum(_, Num.spec(0,20))`)
     o(result).deepEquals(['Yes', 10])
+
+    var result = lib.compileAndRun(`"-5" Str.toNum(_, Num.spec(0,20))`)
+    o(result).deepEquals(['Yes', 0])
+
+    var result = lib.compileAndRun(`"30" Str.toNum(_, Num.spec(0,20))`)
+    o(result).deepEquals(['Yes', 20])
   })
 })
 
@@ -62,7 +68,7 @@ o.spec('branches.Program', function(){
 o.spec('Maybe', function(){
   o('unwrap!', function(){
     var result = lib.compileAndRun(`
-      Str.toNum("5")
+      Str.toNum("5", Num.spec(5,5))
       Maybe.unwrap!(_, [
         @branch Program.exit("didn't work", 1)
       ])
@@ -70,7 +76,7 @@ o.spec('Maybe', function(){
     o(result).deepEquals(5)
 
     var result = lib.compileAndRun(`
-      Str.toNum("not a num")
+      Str.toNum("not a num", Num.spec(10,20))
       Maybe.unwrap!(_, [
         @branch Program.exit("not a num", 1)
       ])

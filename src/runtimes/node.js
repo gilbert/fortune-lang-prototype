@@ -22,9 +22,9 @@ exports.stdlib = {
         run(str) { return str[0].toUpperCase() + str.slice(1) },
       },
       toNum: {
-        run(str) {
-          var n = Number(str)
-          return n ? Maybe.Yes(n) : Maybe.No
+        run(str, [_, min, max]) {
+          var n = Math.min(max, Math.max(min, parseInt(str, 10)))
+          return isNaN(n) ? Maybe.No : Maybe.Yes(n)
         },
       },
     },
@@ -32,6 +32,9 @@ exports.stdlib = {
       add: {
         run(x,y) { return x + y },
       },
+      spec: {
+        run(min, max) { return ['NumSpec', min, max] }
+      }
     },
     Arr: {
       get: {
@@ -95,7 +98,6 @@ function run (ctx, operations, stack) {
     else if ( op[0] === 'inv' ) {
       var [_, mod, fun, unresolvedArgs] = op
       var args = resolveArray(ctx, stack, unresolvedArgs)
-
       var ret = ctx.modules[mod][fun].run.apply(ctx, args)
       stack.push(ret)
     }
