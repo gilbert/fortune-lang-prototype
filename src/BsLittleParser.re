@@ -79,14 +79,14 @@ module MakeParser = (C: ContextI) => {
           /* Calculate actual line and col */
           let line = ref(0);
           let col = ref(q.index);
-          let total = ref(q.index);
+          let errStartIdx = ref(q.index);
           let cosuming_ws = ref(true);
 
           q.text
           |> String.iteri((i,c) => {
               if (c == '\n' && cosuming_ws^ == true) {
                 line := line^ + 1;
-                col  := 1;
+                col  := 0;
               }
               else if (c == ' ' && cosuming_ws^ == true) {
                 col  := col^ + 1;
@@ -99,25 +99,25 @@ module MakeParser = (C: ContextI) => {
                 Js.log("hrm");
                 Js.log(i);
                 Js.log(q.index);
-                total := i - q.index;
+                errStartIdx := i;
               }
             });
-          let eol = try(String.index_from(q.text, total^, '\n')) {
+          let eol = try(String.index_from(q.text, errStartIdx^, '\n')) {
             | Not_found =>
-              total := q.index + col^;
+              errStartIdx := q.index + col^;
               sourceLen
           };
           Js.log("----"); let i=q.index;
-          Js.log({j| index $i line $line col $col total $total eol $eol |j});
+          Js.log({j| index $i line $line col $col errStartIdx $errStartIdx eol $eol |j});
 
-          let msg = "Unrecognize syntax (starting "++string_of_int(line^ + 1)++" col "++string_of_int(col^ + 1) ++ ")"
-            ++ "\n" ++ String.sub(q.text, q.index + total^ - col^, eol - total^ + col^ - q.index)
+          let msg = "Unrecognized syntax (starting "++string_of_int(line^ + 1)++" col "++string_of_int(col^ + 1) ++ ")"
+            ++ "\n" ++ String.sub(q.text, errStartIdx^ - col^, eol - errStartIdx^ + col^)
             ++ "\n" ++ String.make(col^, ' ') ++ "^";
 
           Err(SyntaxErr(line^ + 1,col^ + 1,msg))
         }
       | [@implicit_arity] ParseSuccess(p, q) => Ok((q.context, p))
-      | [@implicit_arity] ParseFailure(_, _) => Err(SyntaxErr(1,1, "No matches anywhere"))
+      | [@implicit_arity] ParseFailure(_, _) => Err(SyntaxErr(1,1, "no_match"))
       };
     let getIndex = parseResult =>
       switch (parseResult) {
@@ -145,6 +145,7 @@ module MakeParser = (C: ContextI) => {
 
   type t('a) = Input.t => ParseResult.t('a);
   let parse = (input: Input.t, parser: t('a)) => parser(input);
+
   let andThen = (p, q, input) =>
     switch (p(input)) {
     | [@implicit_arity] ParseResult.ParseSuccess(result1, input2) =>
@@ -159,6 +160,7 @@ module MakeParser = (C: ContextI) => {
       [@implicit_arity] ParseResult.ParseFailure(message, input)
     };
   let (<*>) = (p, q) => andThen(p, q);
+
   let onlyLeft = (p, q, input) =>
     switch (p(input)) {
     | [@implicit_arity] ParseResult.ParseSuccess(result1, input2) =>
@@ -172,6 +174,7 @@ module MakeParser = (C: ContextI) => {
       [@implicit_arity] ParseResult.ParseFailure(message, input)
     };
   let ( <* ) = (p, q) => onlyLeft(p, q);
+
   let onlyRight = (p, q, input) =>
     switch (p(input)) {
     | [@implicit_arity] ParseResult.ParseSuccess(_, input2) =>
@@ -185,6 +188,7 @@ module MakeParser = (C: ContextI) => {
       [@implicit_arity] ParseResult.ParseFailure(message, input)
     };
   let ( *> ) = (p, q) => onlyRight(p, q);
+
   let orElse = (p, q, input) =>
     switch (p(input)) {
     | [@implicit_arity] ParseResult.ParseSuccess(s, t) =>
@@ -192,6 +196,23 @@ module MakeParser = (C: ContextI) => {
     | ParseResult.ParseFailure(_) => q(input)
     };
   let (<|>) = (p, q) => orElse(p, q);
+
+  let orElseLazyRight = (p, q, input) =>
+    switch (p(input)) {
+    | [@implicit_arity] ParseResult.ParseSuccess(s, t) =>
+      [@implicit_arity] ParseResult.ParseSuccess(s, t)
+    | ParseResult.ParseFailure(_) => (q())(input)
+    };
+  let (<|>|) = (p, q) => orElseLazyRight(p,q);
+
+  let orElseLazyLeft = (p, q, input) =>
+    switch ((p())(input)) {
+    | [@implicit_arity] ParseResult.ParseSuccess(s, t) =>
+      [@implicit_arity] ParseResult.ParseSuccess(s, t)
+    | ParseResult.ParseFailure(_) => q(input)
+    };
+  let (|<|>) = (p, q) => orElseLazyLeft(p,q);
+
   let rep = (p, input) => {
     let rec loop = (acc, input) =>
       switch (p(input)) {

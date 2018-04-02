@@ -1,27 +1,16 @@
 open DepTypeUtil;
 
+let stdtypes = [("Maybe",1)];
+let ann = (source) => TypeAnn.compile(stdtypes, source);
+
 let stdlib = T.{
   modules: [
     Module("Str", [
-      FnDef("split", {
-        let s1var = ConstNumVar(next_id(), "s1");
-        let s1 = makeRangeV(ConstNum(0), s1var);
-        let s2 = makeRangeV(ConstNum(0), ConstNumVar(next_id(), "s2"));
-        BasicFn([Str(s1),Str(s2)], Arr(Str(s1), Range(RangeVal(ConstNum(1)), RangeAdd(s1var, ConstNum(1)))))
-      }),
-      FnDef("upcase", {
-        let s = Str(makeRangeV(ConstNum(0), ConstNumVar(next_id(), "n")));
-        BasicFn([s], s)
-      }),
-      FnDef("cap", {
-        let s = Str(makeRangeV(ConstNum(0), ConstNumVar(next_id(), "n")));
-        BasicFn([s], s)
-      }),
-      FnDef("toNum", {
-        let s = Str(makeRangeV(ConstNum(0), ConstNumVar(next_id(), "n")));
-        let r = makeRangeAny("min","max");
-        BasicFn([s, TypeSpec(NumSpec(r))], TypeCon("Maybe", [|Num(r)|]))
-      })
+      FnDef("split", ann("(Str[0:s1], Str[1:s2]) => Arr[1:s1+1](Str[0:s1])")),
+      FnDef("upcase", ann("(Str[0:n]) => Str[0:n]")),
+      FnDef("cap", ann("(Str[0:n]) => Str[0:n]")),
+      FnDef("toNum", ann("(Str[0:n], NumSpec[min:max]) => Maybe(Num[min:max])")),
+      FnDef("toNumBounded", ann("(Str[0:n], NumSpec[min:max]) => Maybe(Num[min:max])")),
     ]),
     Module("Num", [
       FnDef("spec", def("Num.spec",
@@ -29,33 +18,14 @@ let stdlib = T.{
         ((ctx, args)) => switch (args) {
         | [Num(Range(min, _)), Num(Range(max, _))] =>
           (ctx, TypeSpec(NumSpec(Range(min, max))))
-        | other => raise(TypeError("Unreachable."))
+        | _ => raise(TypeError("Unreachable."))
         })
       ),
-      FnDef("add", {
-        let x1 = ConstNumVar(next_id(), "x1");
-        let x2 = ConstNumVar(next_id(), "x2");
-        let y1 = ConstNumVar(next_id(), "y1");
-        let y2 = ConstNumVar(next_id(), "y2");
-        let a = makeRangeV(x1,y1);
-        let b = makeRangeV(x2,y2);
-        let c = makeRangeAdd(x1,y1,x2,y2);
-        BasicFn([Num(a), Num(b)], Num(c))
-      }),
+      FnDef("add", ann("(Num[x1:y1], Num[x2:y2]) => Num[x1+x2:y1+y2]")),
     ]),
     Module("Arr", [
-      FnDef("get", {
-        let a = Var(next_id(), "a");
-        let n = ConstNumVar(next_id(), "n");
-        let i = Range(RangeVal(ConstNum(0)), RangeAdd(n, ConstNum(-1)));
-        BasicFn([Arr(a, makeRangeV(ConstNum(1), n)), Num(i)], a)
-      }),
-      FnDef("map", {
-        let a = Var(next_id(), "a");
-        let b = Var(next_id(), "b");
-        let n = ConstNumVar(next_id(), "n");
-        BasicFn([Arr(a, makeRangeV(n,n)), Block(a,b)], Arr(b, makeRangeV(n,n)))
-      }),
+      FnDef("get", ann("(Arr[1:n](itemType), Num[0:n-1]) => itemType")),
+      FnDef("map", ann("(Arr[n:m](a), Block(a,b)) => Arr[n:m](b)")),
     ]),
     Module("IO", [
       FnDef("log", DepType("IO.log", ((ctx, args)) => switch (args |> List.length) {
@@ -64,15 +34,7 @@ let stdlib = T.{
       }))
     ]),
     Module("Maybe", [
-      FnDef("unwrap!", {
-        let ty = Var(next_id(), "ty");
-        BasicFn([TypeCon("Maybe", [|ty|]), BranchBlock(Unit, AnyBranch)], ty)
-      }),
-      /* m(Maybe(a)) => m(a) where m.filter :: (m(a), [a -> Bool]) => m(b) */
-      FnDef("filter", def("Maybe.filter", [arity(1)], ((ctx, args)) => switch (args) {
-      | [TypeCon("Maybe", [|_|])] => (ctx, Bool)
-      | other => raise(TypeError("Expected Maybe(type), given " ++ print_types(other, ", ")))
-      }))
+      FnDef("unwrap!", ann("(Maybe(ty), BranchBlock(void)) => ty")),
     ]),
   ],
 

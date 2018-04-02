@@ -1,6 +1,7 @@
 var parse = require('../src/parse.bs').parse
 var Ops = require('../src/compiler/ops.bs')
 var Node = require('../src/runtimes/node')
+var TypeAnn = require('../src/TypeAnn.bs')
 
 exports.compileAndRun = (source, typeStack=[], runtimeStack=[], opts={}) => {
   var [result, [ast], [returnType], errMsg] = parse(typeStack, source)
@@ -30,4 +31,9 @@ exports.getType = (source, typeStack, opts={}) => {
   else {
     throw new Error(errMsg)
   }
+}
+
+exports.compileType = (typeAnn) => {
+  var ty = TypeAnn.compile(typeAnn)
+  return Ops.compileType(ty)
 }

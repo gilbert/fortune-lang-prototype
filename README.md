@@ -17,7 +17,7 @@ const Fortune = require('fortune')
 const source = `
   "hello world"
   Str.split(" ")
-  Arr.map [Str.capitalize]
+  Arr.map [Str.cap]
   Str.join(" ").add("!")
 `
 const program = Fortune.compile(source)
@@ -90,7 +90,7 @@ As a result, Fortune reads more fluently and is less centered around manipulatin
 
 Fortune supports JSON primitives:
 
-```
+```js
 "a string"
 null
 true
@@ -122,7 +122,7 @@ Str.split(" ") //=> Arr("hello", "there")
 // it can always implicitly pop from the stack.
 // You can leave out the parenthesis!
 "alice"
-Str.capitalize //=> "Alice"
+Str.cap //=> "Alice"
 ```
 
 If you have multiple function calls on the same module, you can chain them together without repeating the module name:
@@ -151,12 +151,12 @@ Some functions require a block of code to run. Blocks are written with square br
 ```js
 "hello there"
 Str.split(" ") //=> Arr("hello", "there")
-Arr.map(_) [Str.capitalize] //=> Arr("Hello", "There")
+Arr.map(_) [Str.cap] //=> Arr("Hello", "There")
 
 // Arr.map can implicitly pop its subject off the stack
 "hello there"
 Str.split(" ")
-Arr.map [Str.capitalize]
+Arr.map [Str.cap]
 ```
 
 ## Developing

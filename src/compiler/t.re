@@ -7,13 +7,14 @@ let next_id = () => {
   id_counter^
 };
 
-type num_literal =
+type const_num =
   | ConstNum(int)
   | ConstNumVar(int, string);
 
 type range_val =
-  | RangeVal(num_literal)
-  | RangeAdd(num_literal, num_literal)
+  | RangeVal(const_num)
+  | RangeAdd(const_num, const_num)
+  | RangeSub(const_num, const_num)
   | RangeValMax
   | RangeValMin;
 
@@ -79,14 +80,15 @@ let tyVarAssoc = List.map( (Var(id,name)) => (id,name) );
 
 let print_var = (id,name) => name ++ "." ++ string_of_int(id);
 
-let print_num_literal = (lit) => switch(lit) {
+let print_const_num = (lit) => switch(lit) {
   | ConstNum(n) => string_of_int(n)
   | ConstNumVar(id, name) => print_var(id, name)
 };
 
 let print_range_val = (v) => switch(v) {
-  | RangeVal(v) => print_num_literal(v)
-  | RangeAdd(x,y) => print_num_literal(x) ++ " + " ++ print_num_literal(y)
+  | RangeVal(v) => print_const_num(v)
+  | RangeAdd(x,y) => print_const_num(x) ++ " + " ++ print_const_num(y)
+  | RangeSub(x,y) => print_const_num(x) ++ " - " ++ print_const_num(y)
   | RangeValMax => "MAX"
 };
 let print_range = (Range(x,y)) => "[" ++ print_range_val(x) ++ ":" ++ print_range_val(y) ++ "]";

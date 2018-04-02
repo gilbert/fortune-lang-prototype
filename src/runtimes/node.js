@@ -23,6 +23,12 @@ exports.stdlib = {
       },
       toNum: {
         run(str, [_, min, max]) {
+          var n = parseInt(str, 10)
+          return ! isNaN(n) && n >= min && n <= max ? Maybe.Yes(n) : Maybe.No
+        },
+      },
+      'toNumBounded': {
+        run(str, [_, min, max], defaultVal) {
           var n = Math.min(max, Math.max(min, parseInt(str, 10)))
           return isNaN(n) ? Maybe.No : Maybe.Yes(n)
         },

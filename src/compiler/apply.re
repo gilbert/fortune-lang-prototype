@@ -3,7 +3,7 @@ open T;
 let log = (label, x) => {Js.log(label);Js.log(x);x};
 type s = {
   types: list((int,ty)),
-  constants: list((int,num_literal))
+  constants: list((int,const_num))
 };
 
 let empty_subs = { types: [], constants: [] };
@@ -15,7 +15,7 @@ let push_type_sub = (id, ty, subs : s) => {
   }
 };
 let push_range_sub = (id, num_lit, subs : s) => {
-  Js.log("Sub num_literal ." ++ string_of_int(id) ++ " = " ++ print_num_literal(num_lit));
+  Js.log("Sub const_num ." ++ string_of_int(id) ++ " = " ++ print_const_num(num_lit));
   {
     ...subs,
     constants: [(id,num_lit), ...subs.constants]
@@ -35,6 +35,11 @@ let range_val_common = (subs, v1, v2) => switch (v1,v2) {
     }
   | (RangeAdd(ConstNumVar(id,_),ConstNum(n)), RangeVal(ConstNum(m)))
   | (RangeAdd(ConstNum(n),ConstNumVar(id,_)), RangeVal(ConstNum(m))) =>
+    (subs |> push_range_sub(id, ConstNum(m - n)), v2)
+
+  | (RangeSub(ConstNumVar(id,_),ConstNum(n)), RangeVal(ConstNum(m))) =>
+    (subs |> push_range_sub(id, ConstNum(m + n)), v2)
+  | (RangeSub(ConstNum(n),ConstNumVar(id,_)), RangeVal(ConstNum(m))) =>
     (subs |> push_range_sub(id, ConstNum(m - n)), v2)
   | _ => raise(TypeError("Invalid range comparison: " ++ print_range_val(v1) ++ " and " ++ print_range_val(v2)))
 };
@@ -97,7 +102,7 @@ let sub_num = (subs, c) => switch (c) {
     let num = try(List.assoc(id, subs.constants)) {
       | Not_found => raise(TypeError("Constant variable not found: " ++ name))
     };
-    Js.log("Subbing num const " ++ name ++ " = " ++ print_num_literal(num));
+    Js.log("Subbing num const " ++ name ++ " = " ++ print_const_num(num));
     num
   | other => other
 };

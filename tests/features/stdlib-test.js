@@ -25,10 +25,27 @@ o.spec('String', function(){
     o(result).deepEquals(['Yes', 10])
 
     var result = lib.compileAndRun(`"-5" Str.toNum(_, Num.spec(0,20))`)
-    o(result).deepEquals(['Yes', 0])
+    o(result).deepEquals(['No'])
 
     var result = lib.compileAndRun(`"30" Str.toNum(_, Num.spec(0,20))`)
+    o(result).deepEquals(['No'])
+
+    var result = lib.compileAndRun(`"not a num" Str.toNum(_, Num.spec(0,20))`)
+    o(result).deepEquals(['No'])
+  })
+
+  o('toNumBounded', function(){
+    var result = lib.compileAndRun(`"10" Str.toNumBounded(_, Num.spec(0,20))`)
+    o(result).deepEquals(['Yes', 10])
+
+    var result = lib.compileAndRun(`"-5" Str.toNumBounded(_, Num.spec(0,20))`)
+    o(result).deepEquals(['Yes', 0])
+
+    var result = lib.compileAndRun(`"30" Str.toNumBounded(_, Num.spec(0,20))`)
     o(result).deepEquals(['Yes', 20])
+
+    var result = lib.compileAndRun(`"not a num" Str.toNumBounded(_, Num.spec(0,20))`)
+    o(result).deepEquals(['No'])
   })
 })
 

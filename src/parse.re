@@ -1,15 +1,6 @@
 module Parser = BsLittleParser.MakeParser(Context);
 open Parser;
 
-let orElseLazy = (p, q, input) =>
-  switch (p(input)) {
-  | [@implicit_arity] ParseResult.ParseSuccess(s, t) =>
-    [@implicit_arity] ParseResult.ParseSuccess(s, t)
-  | ParseResult.ParseFailure(_) => (q())(input)
-  };
-
-let (<|>|) = (p, q) => orElseLazy(p,q);
-
 let inspect = [%raw {|
   function(x) {
     console.log( require('util').inspect(x, { depth: 10 }) )

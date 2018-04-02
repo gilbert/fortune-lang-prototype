@@ -35,6 +35,13 @@ o.spec('[Ranges] Calculation', function(){
     `, [])
     o(type).equals('success')
     o(result).deepEquals(['Arr', ['Str', [0,5]], [1,6]])
+
+    var { type, result } = lib.getType(`
+      @Arr(10,20,30)
+      Arr.get(_, 1)
+    `, [])
+    o(type).equals('success')
+    o(result).deepEquals(['Num', [10,30]])
   })
 })
 
