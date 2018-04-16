@@ -21,7 +21,7 @@ o.spec('@if statements', function(){
       :else []
     `, [])
     o(type).equals('success')
-    o(result).deepEquals(['Unit'])
+    o(result).deepEquals(['void'])
   })
 
   o('if-then-else range checking', function(){
