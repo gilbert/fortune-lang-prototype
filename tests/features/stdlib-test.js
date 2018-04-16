@@ -91,7 +91,9 @@ o.spec('Maybe', function(){
       ])
     `)
     o(result).deepEquals(5)
+  })
 
+  o('unwrap! early exit', function(){
     var result = lib.compileAndRun(`
       Str.toNum("not a num", Num.spec(10,20))
       Maybe.unwrap!(_, [

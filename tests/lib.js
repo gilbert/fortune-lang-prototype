@@ -4,7 +4,7 @@ var Node = require('../src/runtimes/node')
 var TypeAnn = require('../src/TypeAnn.bs')
 
 exports.compileAndRun = (source, typeStack=[], runtimeStack=[], opts={}) => {
-  var [result, [ast], [returnType], errMsg] = parse(typeStack, source)
+  var [result, [branchPaths], [ast], [returnType], errMsg] = parse(typeStack, source)
 
   if ( result === 'error' ) {
     throw new Error(errMsg)
@@ -24,12 +24,12 @@ exports.compileAndRun = (source, typeStack=[], runtimeStack=[], opts={}) => {
 }
 
 exports.getType = (source, typeStack, opts={}) => {
-  var [type, [ast], [returnType], errMsg] = parse(typeStack, source)
+  var [type, [branchPaths], [ast], [returnType], errMsg] = parse(typeStack, source)
   if ( type === 'success' ) {
-    return { type: type, result: Ops.compileType(returnType) }
+    return { type, branchPaths, errMsg, result: Ops.compileType(returnType) }
   }
   else {
-    throw new Error(errMsg)
+    return { type, branchPaths, errMsg }
   }
 }
 

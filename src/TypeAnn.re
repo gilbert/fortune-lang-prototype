@@ -71,7 +71,7 @@ let idf = regex([%bs.re "/[a-z][a-zA-Z_0-9]*/"]);
 let num = regex([%bs.re "/[0-9]+/"]) ^^^ int_of_string;
 
 
-let ty_kw = str("void") ^^^ (_s => T.Unit);
+let ty_kw = str("void") ^^^ (_s => T.Void);
 let ty_var = idf ^^> TypeAnnContext.findOrCreateTypeVar;
 
 
@@ -90,7 +90,10 @@ let range_val = const_calc <|> (const_num ^^^ (n => T.RangeVal(n)));
 let rng = (chr('[') *> range_val <* chr(':') <*> range_val <* chr(']'))
       ^^^ (((min,max)) => T.Range(min,max));
 
-/*let ty_plain = cap ^^> ((ctx, name) => (ctx, TypeAnnContext.lookupTypeCons(ctx, name)));*/
+let ty_plain = cap ^^> ((ctx, name) => switch(name) {
+  | "Bool" => (ctx, T.Bool)
+  | _ => (ctx, TypeAnnContext.lookupTypeCons(ctx, name, []))
+});
 
 let ty_ranged = (cap <*> rng) ^^^ (((name, range)) => switch (name) {
   | "Str" => T.Str(range)
@@ -100,7 +103,7 @@ let ty_ranged = (cap <*> rng) ^^^ (((name, range)) => switch (name) {
   | _ => raise(TypeAnnError("No such ranged type: " ++ name))
 });
 
-let ty = ty_ranged_cons_ |<|> ty_ranged <|>| ty_cons_ <|> ty_kw <|> ty_var;
+let ty = ty_ranged_cons_ |<|> ty_ranged <|>| ty_cons_ <|> ty_plain <|> ty_kw <|> ty_var;
 
 let typeArg = ty;
 

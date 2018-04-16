@@ -7,6 +7,14 @@ let push = (ctx : t, s_ctx) => {
   stacks: [s_ctx, ...ctx.stacks]
 };
 
+let pushBranchPath = (ctx : t, path) =>
+  ctx.branchPaths |> List.mem(path)
+    ? ctx
+    : {
+      ...ctx,
+      branchPaths: [path, ...ctx.branchPaths]
+    };
+
 let pushNewSingle = (ctx) => push(ctx, {
   rtStack: [],
   tyVars: []
@@ -40,14 +48,24 @@ let popType = (ctx : t) => {
 
 let topType = (ctx : t) =>
   try(List.hd(ctx.stacks).rtStack |> List.hd) {
-    | Failure("hd") => T.Unit
+    | Failure("hd") => T.Void
   };
+
+let topRtStack = (ctx : t) => List.hd(ctx.stacks).rtStack;
+
+let replaceTopRtStack = (ctx : t, rtStack) => push({
+  ...ctx,
+  stacks: try(List.tl(ctx.stacks)) {
+    | Failure("hd") => raise(T.TypeError("No more stacks!"))
+  }
+}, { rtStack, tyVars: [] });
 
 let create = (branches, mods, stack) => {
   let result : t = {
     branches: branches,
     modules: mods,
-    stacks: [{ rtStack: stack, tyVars: [] }]
+    stacks: [{ rtStack: stack, tyVars: [] }],
+    branchPaths: [],
   };
   result
 };

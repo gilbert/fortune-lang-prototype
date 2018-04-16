@@ -43,26 +43,35 @@ and ty =
   | TypeCon(string, array(ty))
   | DepType(string, ((context, list(ty))) => (context, ty))
   | Var(int, string)
-  | Unit
+  | Void
   | Hole
   | UBlock(list(term)) /* Unresolved Block */
+  | InlineBlock(ty)
   | Block(ty, ty)
   | BranchBlock(ty, branchFn)
+  | Branch(branchFn, ty /* return type */)
   | TypeSpec(tySpec)
 
 and term =
   | Literal(literal)
   | Pop
+  | Peek
   | Inv(fn, list(term))
   | BranchInv(branchFn, list(term))
   | Seq(list(term))
   | BlockTerm(list(term))
+  | Identifier(string)
+  | IfElse(term, term, term)
+  | If(term, term)
 
 and module_('a) = Module(string, list('a))
 and fn = Fn(module_(fnDef), fnDef)
 and fnDef = FnDef(string, ty)
 
-and branchFn = BranchFn(module_(branchDef), branchDef) | AnyBranch
+and branchFn =
+  | BranchFn(module_(branchDef), branchDef)
+  | BranchPath(string)
+  | AnyBranch
 and branchDef = BranchDef(string, ty)
 
 and single_context = {
@@ -72,7 +81,8 @@ and single_context = {
 and context = {
   branches: list(module_(branchDef)),
   modules: list(module_(fnDef)),
-  stacks: list(single_context)
+  stacks: list(single_context),
+  branchPaths: list(string)
 };
 
 let tyVarAssoc = List.map( (Var(id,name)) => (id,name) );
@@ -104,11 +114,14 @@ let rec print = (ty) => switch(ty) {
   | DepType(name, _f) => "DepType(" ++ name ++ ")"
   | BranchBlock(ty, AnyBranch) =>
     "@branch(" ++ print(ty) ++ " -> any)"
+  | BranchBlock(ty, BranchPath(path)) =>
+    "@branch(" ++ path ++ ")"
   | BranchBlock(ty, BranchFn(Module(mod_,_), BranchDef(fun_,_ty))) =>
     "@branch(" ++ print(ty) ++ " -> " ++ mod_ ++ "." ++ fun_ ++ ")"
   | UBlock(_) => "UBlock"
   | Block(a,b) => "[" ++ print(a) ++ " -> " ++ print(b) ++ "]"
-  | Unit => "unit"
+  | InlineBlock(ret) => "[() -> " ++ print(ret) ++ "]"
+  | Void => "void"
   | Hole => "?"
   | TypeSpec(StrSpec(r)) => "StrSpec" ++ print_range(r)
   | TypeSpec(NumSpec(r)) => "NumSpec" ++ print_range(r);

@@ -110,7 +110,8 @@ module MakeParser = (C: ContextI) => {
           Js.log("----"); let i=q.index;
           Js.log({j| index $i line $line col $col errStartIdx $errStartIdx eol $eol |j});
 
-          let msg = "Unrecognized syntax (starting "++string_of_int(line^ + 1)++" col "++string_of_int(col^ + 1) ++ ")"
+          let msg = "Unrecognized syntax (starting line "++string_of_int(line^ + 1)
+                                                ++" col "++string_of_int(col^ + 1) ++ ")"
             ++ "\n" ++ String.sub(q.text, errStartIdx^ - col^, eol - errStartIdx^ + col^)
             ++ "\n" ++ String.make(col^, ' ') ++ "^";
 

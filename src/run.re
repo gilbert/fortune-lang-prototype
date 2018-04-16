@@ -22,6 +22,7 @@ let stdlib = T.{
         })
       ),
       FnDef("add", ann("(Num[x1:y1], Num[x2:y2]) => Num[x1+x2:y1+y2]")),
+      FnDef("eq", ann("(Num[x1:y1], Num[x2:y2]) => Bool")),
     ]),
     Module("Arr", [
       FnDef("get", ann("(Arr[1:n](itemType), Num[0:n-1]) => itemType")),
@@ -30,7 +31,7 @@ let stdlib = T.{
     Module("IO", [
       FnDef("log", DepType("IO.log", ((ctx, args)) => switch (args |> List.length) {
       | 0 => raise(TypeError("IO.log requires at least one argument"))
-      | _ => (ctx, Unit)
+      | _ => (ctx, Void)
       }))
     ]),
     Module("Maybe", [
@@ -42,11 +43,12 @@ let stdlib = T.{
     Module("Program", [
       BranchDef("exit", {
         let s = Str(Range(RangeVal(ConstNum(0)), RangeValMax));
-        let n = Num(makeRangeV(ConstNum(0), ConstNum(99)));
+        let n = Num(makeRangeV(ConstNum(0), ConstNum(5000)));
         BasicFn([s, n], n)
       })
     ])
   ],
 
-  stacks: []
+  stacks: [],
+  branchPaths: []
 };

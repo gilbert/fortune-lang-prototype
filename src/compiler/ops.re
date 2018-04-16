@@ -21,6 +21,7 @@ let rec compileType = (ty) => Js.Json.(switch (ty) {
   | Bool => array([| string("Bool") |])
   | Str(range) => array([| string("Str"), compileRangeType(range) |])
   | Num(range) => array([| string("Num"), compileRangeType(range) |])
+  | Void => array([| string("void") |])
   | Arr(t,range) =>
     array([|
       string("Arr"),
@@ -45,6 +46,13 @@ let rec compileAst = (term) => Js.Json.(switch (term) {
     t |> List.map(compileAst) |> Array.of_list |> array
   |])
 | Pop => array([|string("pop")|])
+| IfElse(cond, then_, else_) =>
+  array([|
+    string("if"),
+    compileAst(cond),
+    compileAst(then_),
+    compileAst(else_),
+  |])
 | Seq(terms) | BlockTerm(terms) =>
   array([|
     string("seq"),
@@ -64,6 +72,8 @@ let rec compileAst = (term) => Js.Json.(switch (term) {
     string(fun_),
     args |> List.map(compileAst) |> Array.of_list |> array
   |])
+| BranchInv(BranchPath(path), _args) =>
+  array([| string("brp"), string(path) |])
 | BranchInv(AnyBranch, _args) =>
   raise(TypeError("[compileAst] Branch invocation should be resolved to a concrete branch"))
 });
