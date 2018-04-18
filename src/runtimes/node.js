@@ -1,3 +1,13 @@
+var Parse = require('../parse.bs')
+var $$Array = require("bs-platform/lib/js/array.js")
+
+exports.parse = function (source, opts) {
+  return Parse.parse(source, Parse.parseOptionsFromJs({
+    runtimeTypeStack: $$Array.to_list([]), // TODO: Write type constructors
+    availableBranchPaths: $$Array.to_list(opts.availableBranchPaths || []),
+  }))
+}
+
 //
 // All runtimes must implement the standard library
 //

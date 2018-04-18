@@ -1,10 +1,9 @@
-var parse = require('../src/parse.bs').parse
 var Ops = require('../src/compiler/ops.bs')
 var Node = require('../src/runtimes/node')
 var TypeAnn = require('../src/TypeAnn.bs')
 
-exports.compileAndRun = (source, typeStack=[], runtimeStack=[], opts={}) => {
-  var [result, [branchPaths], [ast], [returnType], errMsg] = parse(typeStack, source)
+exports.compileAndRun = (source, runtimeStack=[], opts={}) => {
+  var [result, [branchPaths], [ast], [returnType], errMsg] = Node.parse(source, opts)
 
   if ( result === 'error' ) {
     throw new Error(errMsg)
@@ -23,8 +22,8 @@ exports.compileAndRun = (source, typeStack=[], runtimeStack=[], opts={}) => {
   return Node.run(program, runtimeStack)
 }
 
-exports.getType = (source, typeStack, opts={}) => {
-  var [type, [branchPaths], [ast], [returnType], errMsg] = parse(typeStack, source)
+exports.getType = (source, opts={}) => {
+  var [type, [branchPaths], [ast], [returnType], errMsg] = Node.parse(source, opts)
   if ( type === 'success' ) {
     return { type, branchPaths, errMsg, result: Ops.compileType(returnType) }
   }

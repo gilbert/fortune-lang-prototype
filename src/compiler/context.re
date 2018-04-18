@@ -15,6 +15,14 @@ let pushBranchPath = (ctx : t, path) =>
       branchPaths: [path, ...ctx.branchPaths]
     };
 
+let addAvailableBranchPaths = (ctx : t, paths) =>
+  {
+    ...ctx,
+    availableBranchPaths:
+      ctx.availableBranchPaths
+      |> T.BranchPathSet.union( T.BranchPathSet.of_list(paths) )
+  };
+
 let pushNewSingle = (ctx) => push(ctx, {
   rtStack: [],
   tyVars: []
@@ -66,6 +74,7 @@ let create = (branches, mods, stack) => {
     modules: mods,
     stacks: [{ rtStack: stack, tyVars: [] }],
     branchPaths: [],
+    availableBranchPaths: T.BranchPathSet.empty
   };
   result
 };

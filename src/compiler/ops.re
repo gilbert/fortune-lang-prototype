@@ -34,6 +34,18 @@ let rec compileType = (ty) => Js.Json.(switch (ty) {
       string(name),
       tys |> Array.map(compileType) |> array
     |])
+  | Branch(BranchPath(path), ty) =>
+    array([|
+      string("Branch"),
+      array([| string("br_path"), string(path) |]),
+      compileType(ty)
+    |])
+  | Branch(AnyBranch, ty) =>
+    array([|
+      string("Branch"),
+      array([| string("br_any") |]),
+      compileType(ty)
+    |])
 });
 
 

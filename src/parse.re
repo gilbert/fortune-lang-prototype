@@ -117,12 +117,20 @@ let program = seq ^^> ((ctx, terms) => {
 });
 
 
-let parse = (stack, source) => {
+[@bs.deriving jsConverter]
+type parseOptions = {
+  runtimeTypeStack: list(T.ty),
+  availableBranchPaths: list(string)
+};
+
+let parse = (source, opts : parseOptions) => {
   let input = Input.{
     text: source,
     index: 0,
     whitespace: " \n",
-    context: Run.stdlib |> Context.push(_, stack)
+    context: Run.stdlib
+    |> Context.push(_, { rtStack: opts.runtimeTypeStack, tyVars: [] })
+    |> Context.addAvailableBranchPaths(_, opts.availableBranchPaths)
   };
 
   switch (input |> program |> ParseResult.getResult) {

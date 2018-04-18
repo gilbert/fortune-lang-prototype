@@ -246,6 +246,7 @@ and getType = (ctx : Context.t, term) => switch(term) {
 
   let ctx_a = consume(ctx3, thenTerms);
   let ctx_b = consume(ctx3, elseTerms);
+
   Js.log("ctx_a"); Js.log(ctx_a |> Context.topRtStack |> print_types(_, ";"));
   Js.log("ctx_b"); Js.log(ctx_b |> Context.topRtStack |> print_types(_, ";"));
 
@@ -257,8 +258,7 @@ and getType = (ctx : Context.t, term) => switch(term) {
   };
 
   let (_subs2, ctx4, newRtStack) = unify_all(~strict=false, subs1, ctx_a, zip(rtStack_a, rtStack_b));
-  Js.log("ctx4"); Js.log(ctx4 |> Context.topRtStack |> print_types(_, ";"));
-  Js.log("newRtStack"); Js.log(newRtStack |> print_types(_, ";"));
+
   let ctx5 = ctx4 |> Context.replaceTopRtStack(_, newRtStack);
 
   (ctx5, List.length(newRtStack) > 0 ? List.hd(newRtStack) : Void)
@@ -367,6 +367,9 @@ switch (a,b) {
       | Not_found => raise(TypeError("[internal] Unresolved block input type: " ++ name1))
     };
     unify(~strict, subs, ctx, Block(inputTy, v2), b)
+
+  | (Branch(_,_), Branch(_,_)) when strict == false =>
+    (subs, ctx, Branch(AnyBranch, Void))
 
   | (Block(inputTy, Var(id,_name) as var), UBlock(terms)) =>
     /* type var might have already been resolved */

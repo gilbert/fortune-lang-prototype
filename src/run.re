@@ -50,5 +50,6 @@ let stdlib = T.{
   ],
 
   stacks: [],
-  branchPaths: []
+  branchPaths: [],
+  availableBranchPaths: BranchPathSet.empty
 };

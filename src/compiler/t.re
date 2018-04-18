@@ -1,5 +1,6 @@
 exception TypeError(string);
 
+module BranchPathSet = Set.Make(String);
 let id_counter = ref(0);
 
 let next_id = () => {
@@ -82,7 +83,8 @@ and context = {
   branches: list(module_(branchDef)),
   modules: list(module_(fnDef)),
   stacks: list(single_context),
-  branchPaths: list(string)
+  branchPaths: list(string),
+  availableBranchPaths: BranchPathSet.t
 };
 
 let tyVarAssoc = List.map( (Var(id,name)) => (id,name) );
@@ -118,6 +120,12 @@ let rec print = (ty) => switch(ty) {
     "@branch(" ++ path ++ ")"
   | BranchBlock(ty, BranchFn(Module(mod_,_), BranchDef(fun_,_ty))) =>
     "@branch(" ++ print(ty) ++ " -> " ++ mod_ ++ "." ++ fun_ ++ ")"
+  | Branch(AnyBranch, Void) =>
+    "@branch(any -> void)"
+  | Branch(AnyBranch, ty) =>
+    raise(TypeError("Impossible"))
+  | Branch(BranchPath(path), ty) =>
+    "@branch('" ++ path ++ "' -> " ++ print(ty) ++ ")"
   | UBlock(_) => "UBlock"
   | Block(a,b) => "[" ++ print(a) ++ " -> " ++ print(b) ++ "]"
   | InlineBlock(ret) => "[() -> " ++ print(ret) ++ "]"
