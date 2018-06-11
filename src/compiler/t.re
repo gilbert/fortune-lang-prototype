@@ -33,6 +33,7 @@ type tySpec =
 type literal =
   | StrLit(string)
   | ArrLit(list(term))
+  | TupLit(list(term))
   | NumLit(int)
 
 and ty =
@@ -41,6 +42,7 @@ and ty =
   | Bool
   | BasicFn(list(ty), ty)
   | Arr(ty, range)
+  | Tup(array(ty))
   | TypeCon(string, array(ty))
   | DepType(string, ((context, list(ty))) => (context, ty))
   | Var(int, string)
@@ -113,6 +115,7 @@ let rec print = (ty) => switch(ty) {
   | BasicFn(args, ret) => "(" ++ print_types(args, ", ") ++ ") => " ++ print(ret)
   | TypeCon(name, tys) => name ++ "(" ++ print_types(tys |> Array.to_list, ", ") ++ ")"
   | Arr(ty, range) => "Arr(" ++ print(ty) ++ ")" ++ print_range(range)
+  | Tup(tys) => "Tup(" ++ print_types(tys |> Array.to_list, ", ") ++ ")"
   | DepType(name, _f) => "DepType(" ++ name ++ ")"
   | BranchBlock(ty, AnyBranch) =>
     "@branch(" ++ print(ty) ++ " -> any)"

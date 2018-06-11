@@ -3,7 +3,7 @@ let (>>) = (f, g, x) => g(f(x));
 let compose = (fns) => fns |> List.fold_left((f, g) => (x) => f(g(x)), (x => x));
 
 let def = (fname, pipeline, endpoint) =>
-  T.DepType(fname, compose(pipeline) >> endpoint);
+  T.DepType(fname, compose(pipeline |> List.rev) >> endpoint);
 
 let arity = (num) => ((ctx, args)) => switch (args |> List.length) {
   | n when n == num => (ctx, args)

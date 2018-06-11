@@ -1,4 +1,5 @@
 open T;
+exception Temp(string);
 
 let log = (label, x) => {Js.log(label);Js.log(x);x};
 type s = {
@@ -236,6 +237,20 @@ and getType = (ctx : Context.t, term) => switch(term) {
 
     (ctx4, Arr(itemType, makeRangeV(n,n)))
   }
+| Literal(TupLit(terms)) =>
+  let length = terms |> List.length;
+  let n = ConstNum(length);
+  if (length == 0) {
+    (ctx, Tup([||]))
+  }
+  else {
+    /* Get type of each term in the tuple literal */
+    let (ctx3, termTypes) = getTypes(ctx, terms);
+    Tup(termTypes |> Belt.List.toArray) |> ignore;
+
+    /* Types are independent; no need for compatibility checking */
+    (ctx3, Tup(termTypes |> Belt.List.toArray))
+  }
 | IfElse(cond, then_, else_) =>
   let (ctx2, condTy) = getType(ctx, cond);
   let (subs1, ctx3, _boolType) = unify(empty_subs, ctx2, condTy, Bool);
@@ -290,6 +305,8 @@ and getType = (ctx : Context.t, term) => switch(term) {
 | Seq(terms) =>
     let ctx2 = consume(ctx, terms);
     (ctx2, ctx2 |> Context.topType)
+
+| Peek | Identifier(_) | If(_,_) => raise(Temp("Not implemented"))
 }
 
 and consume = (context : Context.t, terms) => {

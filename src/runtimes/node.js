@@ -48,6 +48,9 @@ exports.stdlib = {
       add: {
         run(x,y) { return x + y },
       },
+      eq: {
+        run(x,y) { return x === y },
+      },
       spec: {
         run(min, max) { return ['NumSpec', min, max] }
       }
@@ -58,6 +61,11 @@ exports.stdlib = {
       },
       map: {
         run(a, f) { return a.map(x => f(x)) },
+      },
+    },
+    Tup: {
+      get: {
+        run(tup, index) { return tup[index] },
       },
     },
     IO: {
@@ -123,6 +131,11 @@ function run (ctx, operations, stack) {
 
       var ret = ctx.branches[mod][fun].run.apply(ctx, args)
       throw new BranchExit(`${mod}.${fun}`, ret)
+    }
+    else if ( op[0] === 'tup' ) {
+      var [_, unresolvedItems] = op
+      var items = resolveArray(ctx, stack, unresolvedItems)
+      stack.push(items)
     }
     else {
       throw new Error('[Fortune.node.run] Unknown op: ' + JSON.stringify(op[0] || null))

@@ -23,6 +23,8 @@ let m_if_ : unit => (Input.t => ParseResult.t(T.term))
   = [%raw {| function() { return m_if } |}];
 let arrLit_ : unit => (Input.t => ParseResult.t(T.literal))
   = [%raw {| function() { return arrLit } |}];
+let tupLit_ : unit => (Input.t => ParseResult.t(T.literal))
+  = [%raw {| function() { return tupLit } |}];
 
 
 let cap = regex([%bs.re "/[A-Z][a-zA-Z_0-9]*/"]);
@@ -35,7 +37,7 @@ let numLit = regex([%bs.re "/[0-9]+/"]) ^^^ (x => T.NumLit(x |> int_of_string));
 
 let mword = (word) => chr('@') *> Parser.str(word);
 
-let literal = (strLit <|> numLit <|>| arrLit_) ^^^ (x => T.Literal(x));
+let literal = (strLit <|> numLit <|>| arrLit_ <|>| tupLit_) ^^^ (x => T.Literal(x));
 
 let modFn = (cap <* chr('.') <*> idf) ^^> (ctx, (mName,fName)) => {
   (ctx, Context.lookup(ctx, mName, fName))
@@ -64,6 +66,7 @@ let args = (arg <*> rep(chr(',') *> arg))
 let argList = (chr('(') *> args <* chr(')'));
 
 let arrLit = (Parser.str("@Arr") *> argList) ^^^ (terms => T.ArrLit(terms));
+let tupLit = (Parser.str("@Tup") *> argList) ^^^ (terms => T.TupLit(terms));
 
 let inv = ((branchFn <*> argList) ^^^ (((fn, args)) => T.BranchInv(fn, args)))
 <|> ((modFn <*> argList) ^^^ (((fn, args)) => T.Inv(fn, args)));

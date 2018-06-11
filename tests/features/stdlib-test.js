@@ -53,7 +53,15 @@ o.spec('String', function(){
 o.spec('Num', function(){
   o('add', function(){
     var result = lib.compileAndRun(`10 Num.add(15,_)`)
-    o(result).deepEquals(25)
+    o(result).equals(25)
+  })
+
+  o('eq', function(){
+    var result = lib.compileAndRun(`Num.eq(10, 15)`)
+    o(result).equals(false)
+
+    var result = lib.compileAndRun(`Num.eq(15, 15)`)
+    o(result).equals(true)
   })
 })
 
@@ -61,11 +69,22 @@ o.spec('Num', function(){
 o.spec('Arr', function(){
   o('get', function(){
     var result = lib.compileAndRun(`@Arr(10,20) Arr.get(_,1)`)
-    o(result).deepEquals(20)
+    o(result).equals(20)
   })
   o('map', function(){
     var result = lib.compileAndRun(`@Arr(10,20) Arr.map(_,[Num.add(1,_)])`)
     o(result).deepEquals([11,21])
+  })
+})
+
+
+o.spec('Tup', function(){
+  o('get', function(){
+    var result = lib.compileAndRun(`@Tup("x", 20) Tup.get(_,0)`)
+    o(result).equals('x')
+
+    var result = lib.compileAndRun(`@Tup("x", 20, 30) Tup.get(_,1)`)
+    o(result).equals(20)
   })
 })
 

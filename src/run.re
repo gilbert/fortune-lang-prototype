@@ -28,6 +28,24 @@ let stdlib = T.{
       FnDef("get", ann("(Arr[1:n](itemType), Num[0:n-1]) => itemType")),
       FnDef("map", ann("(Arr[n:m](a), Block(a,b)) => Arr[n:m](b)")),
     ]),
+    Module("Tup", [
+      FnDef("get", def("Tup.get",
+        [arity(2), requireConstNum(1)],
+        ((ctx, args)) => switch (args) {
+        | [Tup(tys), Num(Range(RangeVal(ConstNum(n)), _))] =>
+          if (n >= Array.length(tys)) {
+            raise(TypeError("Cannot get index " ++ string_of_int(n) ++ " of " ++ print(Tup(tys))))
+          }
+          else if ( n < 0 ) {
+            raise(TypeError("Invalid tuple index: " ++ string_of_int(n)))
+          }
+          else {
+            (ctx, Array.get(tys, n))
+          }
+        | _ => raise(TypeError("Unreachable."))
+        })
+      ),
+    ]),
     Module("IO", [
       FnDef("log", DepType("IO.log", ((ctx, args)) => switch (args |> List.length) {
       | 0 => raise(TypeError("IO.log requires at least one argument"))

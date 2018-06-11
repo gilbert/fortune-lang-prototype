@@ -28,6 +28,11 @@ let rec compileType = (ty) => Js.Json.(switch (ty) {
       compileType(t),
       compileRangeType(range)
     |])
+  | Tup(tys) =>
+    array([|
+      string("Tup"),
+      tys |> Array.map(compileType) |> array
+    |])
   | TypeCon(name, tys) =>
     array([|
       string("TypeCon"),
@@ -52,10 +57,15 @@ let rec compileType = (ty) => Js.Json.(switch (ty) {
 let rec compileAst = (term) => Js.Json.(switch (term) {
 | Literal(StrLit(s)) => array([|string("lit"), string(s)|])
 | Literal(NumLit(n)) => array([|string("lit"), num(n)|])
-| Literal(ArrLit(t)) =>
+| Literal(ArrLit(terms)) =>
   array([|
     string("arr"),
-    t |> List.map(compileAst) |> Array.of_list |> array
+    terms |> List.map(compileAst) |> Array.of_list |> array
+  |])
+| Literal(TupLit(terms)) =>
+  array([|
+    string("tup"),
+    terms |> List.map(compileAst) |> Array.of_list |> array
   |])
 | Pop => array([|string("pop")|])
 | IfElse(cond, then_, else_) =>
